@@ -1,0 +1,62 @@
+.dashboard{
+  padding:40px;
+}
+
+.title{
+  margin-bottom:25px;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:20px;
+}
+
+.card{
+  background:#ffffff0f;
+  padding:20px;
+  border-radius:10px;
+}
+
+.bar{
+  height:8px;
+  width:60%;
+  background:#3b4155;
+  margin-top:15px;
+  border-radius:10px;
+}
+
+.lower-section{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:20px;
+  margin-top:30px;
+}
+
+.trend-box{
+  background:#ffffff0f;
+  padding:20px;
+  border-radius:10px;
+}
+
+.fake-chart{
+  display:flex;
+  align-items:flex-end;
+  gap:15px;
+  margin-top:20px;
+}
+
+.fake-chart div{
+  width:18px;
+  background:#505770;
+}
+
+.insights{
+  background:#ffffff0f;
+  padding:20px;
+  border-radius:10px;
+}
+
+.insights li{
+  margin-bottom:10px;
+}
