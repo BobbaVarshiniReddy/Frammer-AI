@@ -1,32 +1,26 @@
 import duckdb
 import os
+from config import DB_PATH, SCHEMA_PATH
 
-conn=duckdb.connect("./database/frammer.db")
-print("connected to database")
+# ── FIX: was hardcoded path, now uses config ──────────────────────────────────
+conn = duckdb.connect(DB_PATH)
+print("Connected to database.")
+
 
 def extract_table_info(conn, table_name):
     """
-    Reads one table and returns all
-    column information as a dictionary
+    Reads one table and returns all column information as a dictionary.
     """
-
     info = {}
-
-    columns = conn.execute(
-        f"DESCRIBE {table_name}"
-    ).df()
+    columns = conn.execute(f"DESCRIBE {table_name}").df()
 
     for _, row in columns.iterrows():
-
         col_name = row['column_name']
         col_type = row['column_type']
         col_info = {'type': col_type}
 
-        # Text columns → get exact unique values
-        # This is critical for preventing
-        # hallucination on categorical values
+        # Text columns → get exact unique values (prevents hallucination)
         if 'VARCHAR' in col_type:
-
             try:
                 unique = conn.execute(f"""
                     SELECT DISTINCT {col_name}
@@ -47,14 +41,11 @@ def extract_table_info(conn, table_name):
             except Exception as e:
                 col_info['note'] = str(e)
 
-        # Integer columns → show unique values
-        # if small set, otherwise show range
+        # Integer columns → unique values if small set, else range
         elif 'INTEGER' in col_type or 'BIGINT' in col_type:
-
             try:
                 count_unique = conn.execute(f"""
-                    SELECT COUNT(DISTINCT {col_name})
-                    FROM {table_name}
+                    SELECT COUNT(DISTINCT {col_name}) FROM {table_name}
                 """).fetchone()[0]
 
                 if count_unique <= 10:
@@ -67,9 +58,7 @@ def extract_table_info(conn, table_name):
                     col_info['unique_values'] = unique
                 else:
                     stats = conn.execute(f"""
-                        SELECT
-                            MIN({col_name}) AS min_val,
-                            MAX({col_name}) AS max_val
+                        SELECT MIN({col_name}), MAX({col_name})
                         FROM {table_name}
                     """).fetchone()
                     col_info['min'] = stats[0]
@@ -78,15 +67,14 @@ def extract_table_info(conn, table_name):
             except Exception as e:
                 col_info['note'] = str(e)
 
-        # Double/Float columns → show range
+        # Double/Float columns → range + average
         elif 'DOUBLE' in col_type or 'FLOAT' in col_type:
-
             try:
                 stats = conn.execute(f"""
                     SELECT
-                        ROUND(MIN({col_name}), 2) AS min_val,
-                        ROUND(MAX({col_name}), 2) AS max_val,
-                        ROUND(AVG({col_name}), 2) AS avg_val
+                        ROUND(MIN({col_name}), 2),
+                        ROUND(MAX({col_name}), 2),
+                        ROUND(AVG({col_name}), 2)
                     FROM {table_name}
                     WHERE {col_name} IS NOT NULL
                 """).fetchone()
@@ -102,52 +90,50 @@ def extract_table_info(conn, table_name):
     return info
 
 
-def build_table_text(table_name,table_info,row_count):
-    text=f"\nTable:{table_name}"
-    text+=f"({row_count} rows)\n"
-    text+="-"*45 +"\n"
-    for col_name,info in table_info.items():
+def build_table_text(table_name, table_info, row_count):
+    text  = f"\nTable: {table_name} ({row_count} rows)\n"
+    text += "-" * 45 + "\n"
 
-        text+=f"\n {col_name} ({info['type']})"
+    for col_name, info in table_info.items():
+        text += f"\n  {col_name} ({info['type']})"
 
         if 'unique_values' in info:
-            text+=f"\n Exact values:{info['unique_values']}"
-            if info.get('null_count',0)>0:
-                text+=f"\n Nulls:{info['null_count']}"
+            text += f"\n    Exact values: {info['unique_values']}"
+            if info.get('null_count', 0) > 0:
+                text += f"\n    Nulls: {info['null_count']}"
 
         elif 'min' in info:
-            text+=f"\n Range: {info['min']} to {info['max']}"
+            text += f"\n    Range: {info['min']} to {info['max']}"
             if 'avg' in info:
-                text+=f", avg: {info['avg']}"
-        text+="\n"
+                text += f", avg: {info['avg']}"
+
+        text += "\n"
+
     return text
 
 
 def build_complete_schema(conn):
 
-    schema="""
-    ================================================
+    schema = """
+================================================
 DATABASE: DuckDB — Frammer AI Analytics
 DATE RANGE: March 2025 to February 2026
 ================================================
 
 PLATFORM CONTEXT:
-Frammer AI  converts long-form video content into short-form outputs.
+Frammer AI converts long-form video content into short-form outputs.
 
 TERMINOLOGY:
-Uploaded=raw content uploaded to Frammer AI
-Created=output content created by Frammer AI (Full package,
-Key moments,
-Chapters,
-My Key moments,
-Summary
-)
-Pulished=content published by users on social media platforms
+Uploaded  = raw content uploaded to Frammer AI
+Created   = output content created by Frammer AI
+            (Full package, Key moments, Chapters,
+             My Key moments, Summary)
+Published = content published by users on social media
 
 KEY METRICS:
-publish_rate_pct = published/created * 100
+publish_rate_pct = published / created * 100
 drop_off_count   = created - published
-creation_ratio   = created/uploaded
+creation_ratio   = created / uploaded
 uploaded_hours   = total hours of uploaded content
 created_hours    = total hours of created content
 
@@ -155,32 +141,30 @@ created_hours    = total hours of created content
 TABLES
 ================================================
 """
+
     preferred_order = [
-            'bridge_user_channel',
-            'dim_channel',
-            'dim_user',
-            'dim_input_type',
-            'dim_output_type',
-            'dim_language',
-            'summary_user',
-            'summary_channel',
-            'summary_monthly',
-            'summary_input_type',
-            'summary_output_type',
-            'summary_language'
-        ]
+        'bridge_user_channel',
+        'dim_channel',
+        'dim_user',
+        'dim_input_type',
+        'dim_output_type',
+        'dim_language',
+        'summary_user',
+        'summary_channel',
+        'summary_monthly',
+        'summary_input_type',
+        'summary_output_type',
+        'summary_language',
+    ]
 
-    all_tables=conn.execute("SHOW TABLES").df()['name'].tolist()
-
+    all_tables  = conn.execute("SHOW TABLES").df()['name'].tolist()
     clean_tables = [t for t in preferred_order if t in all_tables]
+
     for table_name in clean_tables:
-        row_count=conn.execute(
-                    f"SELECT COUNT(*) FROM {table_name}"
-                ).fetchone()[0]
-        
-        table_info=extract_table_info(conn,table_name)
-        table_text=build_table_text(table_name,table_info,row_count)
-        schema +=table_text
+        row_count  = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+        table_info = extract_table_info(conn, table_name)
+        table_text = build_table_text(table_name, table_info, row_count)
+        schema    += table_text
         print(f"Processed schema for table: {table_name}")
 
     schema += """
@@ -188,22 +172,15 @@ TABLES
 HOW TABLES CONNECT
 ================================================
 
-bridge_user_channel.user_id
-    → dim_user.user_id
+bridge_user_channel.user_id    → dim_user.user_id
+bridge_user_channel.channel_id → dim_channel.channel_id
+summary_channel.channel_id     → dim_channel.channel_id
 
-bridge_user_channel.channel_id
-    → dim_channel.channel_id
+summary_user    is aggregated FROM bridge_user_channel
+                (totals per user across all channels)
 
-summary_channel.channel_id
-    → dim_channel.channel_id
-
-summary_user is aggregated FROM
-    bridge_user_channel
-    (totals per user across all channels)
-
-summary_channel is aggregated FROM
-    raw_channel_summary
-    (totals per channel across all users)
+summary_channel is aggregated FROM raw_channel_summary
+                (totals per channel across all users)
 
 ================================================
 TABLE SELECTION RULES — VERY IMPORTANT
@@ -211,49 +188,43 @@ TABLE SELECTION RULES — VERY IMPORTANT
 
 Use summary_user when:
 → Question about user TOTAL across all channels
-→ "who uploaded most" → summary_user
-→ "top users by hours" → summary_user
-→ "user publish rate" → summary_user
+→ "who uploaded most"    → summary_user
+→ "top users by hours"   → summary_user
+→ "user publish rate"    → summary_user
 
 Use bridge_user_channel when:
 → Question needs BOTH user AND channel
-→ "Neha in channel A" → bridge_user_channel
-→ "top users IN channel B" → bridge_user_channel
-→ "which channel does X work most in"
-   → bridge_user_channel
+→ "Neha in channel A"               → bridge_user_channel
+→ "top users IN channel B"          → bridge_user_channel
+→ "which channel does X work most in" → bridge_user_channel
 
 Use summary_channel when:
 → Question about channel TOTAL across all users
 → "which channel most active" → summary_channel
-→ "channel drop-off" → summary_channel
-→ "channel publish rate" → summary_channel
+→ "channel drop-off"          → summary_channel
+→ "channel publish rate"      → summary_channel
 
 Use summary_monthly when:
 → Any question about time or month
-→ "monthly trend" → summary_monthly
-→ "which month had most uploads"
-   → summary_monthly
+→ "monthly trend"                  → summary_monthly
+→ "which month had most uploads"   → summary_monthly
 
 Use summary_input_type when:
 → Question about content type
-→ "interview vs speech" → summary_input_type
-→ "which input type most uploaded"
-   → summary_input_type
+→ "interview vs speech"            → summary_input_type
+→ "which input type most uploaded" → summary_input_type
 
 Use summary_output_type when:
 → Question about output format
-→ "reels vs chapters" → summary_output_type
-→ "which output type published most"
-   → summary_output_type
+→ "reels vs chapters"                  → summary_output_type
+→ "which output type published most"   → summary_output_type
 
 Use summary_language when:
 → Question about language
-→ "hindi vs english" → summary_language
-→ "which language most active"
-   → summary_language
+→ "hindi vs english"         → summary_language
+→ "which language most active" → summary_language
 
-NEVER join summary_monthly with
-summary_channel or summary_user.
+NEVER join summary_monthly with summary_channel or summary_user.
 Monthly data has NO channel or user breakdown.
 
 ================================================
@@ -261,8 +232,7 @@ METRIC FORMULAS
 ================================================
 
 Publish rate:
-→ ROUND(published_count * 100.0
-        / NULLIF(created_count, 0), 2)
+→ ROUND(published_count * 100.0 / NULLIF(created_count, 0), 2)
 
 Drop-off:
 → created_count - published_count
@@ -279,12 +249,11 @@ CRITICAL RULES — NEVER BREAK THESE
 
 RULE 1: channel_name exact values
     Single capital letters ONLY:
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-    'Q', 'R'
+    'A','B','C','D','E','F','G','H','I','J',
+    'K','L','M','N','O','P','Q','R'
     NEVER: 'channel_a', 'Channel A', 'ch_a'
 
-RULE 2: input_type exact values 
+RULE 2: input_type exact values
     'interview', 'news bulletin', 'debate',
     'speech', 'special reports',
     'press conference', 'discussion-show',
@@ -308,32 +277,12 @@ RULE 6: month exact format
     'Jun, 2025', 'Mar, 2025', 'May, 2025',
     'Nov, 2025', 'Oct, 2025', 'Sep, 2025'
 
-RULE 7: Always use NULLIF for division
-    ROUND(value * 100.0 / NULLIF(total, 0), 2)
-
-RULE 8: Always alias columns
-    COUNT(*) AS total_count (not just COUNT(*))
-
-RULE 9: Always ORDER BY main metric DESC
-    Unless user asks for ascending
-
-RULE 10: Always LIMIT 10
-    Unless user asks for more or less
-
-RULE 11: Duration columns are TEXT
-    uploaded_duration_text is "hh:mm:ss"
-    Cannot do math on text columns
-    Use uploaded_secs or uploaded_hours
-    for calculations instead
-
-RULE 12: No date filtering possible
-    fact tables have no date columns
-    Only summary_monthly has month column
-    Cannot filter by specific date
-
-
-    
-
+RULE 7:  Always use NULLIF for division
+RULE 8:  Always alias columns (COUNT(*) AS total_count)
+RULE 9:  Always ORDER BY main metric DESC
+RULE 10: Always LIMIT 10 unless user specifies
+RULE 11: Duration columns are TEXT — use _secs or _hours for math
+RULE 12: No date filtering on fact tables; only summary_monthly has month
 
 ================================================
 EXAMPLE QUERIES
@@ -400,15 +349,13 @@ Example 8: Language breakdown
 
 Example 9: Overall KPIs
     SELECT
-        SUM(uploaded_count) AS total_uploaded,
-        SUM(created_count)  AS total_created,
-        SUM(published_count) AS total_published,
-        SUM(drop_off_count) AS total_drop_off,
-        ROUND(SUM(published_count)*100.0
-              /NULLIF(SUM(created_count),0),2)
-              AS overall_publish_rate,
-        ROUND(SUM(uploaded_secs)/3600.0,2)
-              AS total_uploaded_hours
+        SUM(uploaded_count)   AS total_uploaded,
+        SUM(created_count)    AS total_created,
+        SUM(published_count)  AS total_published,
+        SUM(drop_off_count)   AS total_drop_off,
+        ROUND(SUM(published_count) * 100.0
+              / NULLIF(SUM(created_count), 0), 2) AS overall_publish_rate,
+        ROUND(SUM(uploaded_secs) / 3600.0, 2)    AS total_uploaded_hours
     FROM summary_channel;
 
 Example 10: Which user works in most channels
@@ -419,23 +366,19 @@ Example 10: Which user works in most channels
     LIMIT 10;
 
 """
+    return schema
 
-    return schema  
 
-schema_text=build_complete_schema(conn)
+schema_text = build_complete_schema(conn)
 
-with open("llm_schema.txt","w",encoding="utf-8") as f:
+# ── FIX: now uses SCHEMA_PATH from config instead of hardcoded path ───────────
+with open(SCHEMA_PATH, "w", encoding="utf-8") as f:
     f.write(schema_text)
 
-print("LLM schema built and saved to llm_schema.txt")
+print(f"\nLLM schema saved to {SCHEMA_PATH}")
 print("Schema preview:")
-lines=schema_text.split('\n')
-for line in lines[:30]:
+for line in schema_text.split('\n')[:30]:
     print(line)
 
 conn.close()
-print("complete")
-
-
-        
-
+print("\nComplete.")
