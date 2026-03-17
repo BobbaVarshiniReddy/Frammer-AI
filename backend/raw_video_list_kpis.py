@@ -115,7 +115,7 @@ def get_kpi19_unknown_team_name_rate() -> tuple[pa.Table, str]:
         FROM raw_video_list
     """).arrow()
     con.close()
-    return table
+    return table, None
 
 
 def get_kpi20_published_url_completeness() -> tuple[pa.Table, str]:
@@ -144,7 +144,7 @@ def get_kpi20_published_url_completeness() -> tuple[pa.Table, str]:
         WHERE "Published" = 'Yes'
     """).arrow()
     con.close()
-    return table
+    return table, None
 
 
 def get_kpi21_overall_published_rate() -> tuple[pa.Table, str]:
@@ -171,7 +171,7 @@ def get_kpi21_overall_published_rate() -> tuple[pa.Table, str]:
         FROM raw_video_list
     """).arrow()
     con.close()
-    return table
+    return table, None
 
 
 def get_kpi22_duplicate_video_id_count() -> tuple[pa.Table, str]:
@@ -193,4 +193,4 @@ def get_kpi22_duplicate_video_id_count() -> tuple[pa.Table, str]:
         )
     """).arrow()
     con.close()
-    return table
+    return table, None
