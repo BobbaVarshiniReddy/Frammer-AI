@@ -31,7 +31,7 @@ def get_kpi14_published_platform_distribution() -> tuple[pa.Table, str]:
         ORDER BY "share_pct" DESC
     """).arrow()
     con.close()
-    return table, "KPI 14 – Published Platform Distribution (%)"
+    return table, "bar"
 
 
 def get_kpi16_published_rate_per_uploader() -> tuple[pa.Table, str]:
@@ -61,7 +61,7 @@ def get_kpi16_published_rate_per_uploader() -> tuple[pa.Table, str]:
         ORDER BY "Published_Rate_%" DESC
     """).arrow()
     con.close()
-    return table, "KPI 16 – Published Rate % per Uploader"
+    return table, "bar"
 
 
 def get_kpi17_top_uploaders(top_n: int = 5) -> tuple[pa.Table, str]:
@@ -88,7 +88,7 @@ def get_kpi17_top_uploaders(top_n: int = 5) -> tuple[pa.Table, str]:
         LIMIT {top_n}
     """).arrow()
     con.close()
-    return table, f"KPI 17 – Top {top_n} Uploaders by Video Count"
+    return table, "line"
 
 
 def get_kpi19_unknown_team_name_rate() -> tuple[pa.Table, str]:
@@ -115,7 +115,7 @@ def get_kpi19_unknown_team_name_rate() -> tuple[pa.Table, str]:
         FROM raw_video_list
     """).arrow()
     con.close()
-    return table, "KPI 19 – Unknown Team Name Rate (%)"
+    return table
 
 
 def get_kpi20_published_url_completeness() -> tuple[pa.Table, str]:
@@ -144,7 +144,7 @@ def get_kpi20_published_url_completeness() -> tuple[pa.Table, str]:
         WHERE "Published" = 'Yes'
     """).arrow()
     con.close()
-    return table, "KPI 20 – Published URL Completeness among Published Videos (%)"
+    return table
 
 
 def get_kpi21_overall_published_rate() -> tuple[pa.Table, str]:
@@ -171,7 +171,7 @@ def get_kpi21_overall_published_rate() -> tuple[pa.Table, str]:
         FROM raw_video_list
     """).arrow()
     con.close()
-    return table, "KPI 21 – Overall Published Rate (%)"
+    return table
 
 
 def get_kpi22_duplicate_video_id_count() -> tuple[pa.Table, str]:
@@ -194,4 +194,4 @@ def get_kpi22_duplicate_video_id_count() -> tuple[pa.Table, str]:
         )
     """).arrow()
     con.close()
-    return table, "KPI 22 – Duplicate Video ID Count"
+    return table
