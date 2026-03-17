@@ -177,7 +177,6 @@ def get_kpi21_overall_published_rate() -> tuple[pa.Table, str]:
 def get_kpi22_duplicate_video_id_count() -> tuple[pa.Table, str]:
     """
     KPI 22: Number of Video IDs that appear more than once in the dataset.
-
     Returns
     -------
     table       : columns ["duplicate_video_id_count"]
