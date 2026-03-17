@@ -5,7 +5,6 @@ kpis.py
 import pyarrow as pa
 from database import get_connection
 
-
 def get_kpi14_published_platform_distribution() -> tuple[pa.Table, str]:
     """
     KPI 14: For every Published Platform, the percentage share of
@@ -25,7 +24,7 @@ def get_kpi14_published_platform_distribution() -> tuple[pa.Table, str]:
                 100.0 * COUNT(*) / SUM(COUNT(*)) OVER (),
                 2
             )                                                           AS "share_pct"
-        FROM raw_video_list
+        FROM raw_input_type
         WHERE "Published" = 'Yes'
         GROUP BY "Published Platform"
         ORDER BY "share_pct" DESC
