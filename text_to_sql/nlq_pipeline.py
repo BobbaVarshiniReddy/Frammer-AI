@@ -3,6 +3,7 @@ import google.generativeai as genai
 import os
 import re
 from config import DB_PATH, SCHEMA_PATH, GEMINI_API_KEY, GEMINI_MODEL
+from visualize import generate_chart
 
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -250,6 +251,7 @@ def nlq_query(user_question):
         "explanation": {},
         "error"      : None,
         "retried"    : False,
+        "chart_path" : None,
     }
 
     prompt = build_prompt(user_question)
@@ -297,7 +299,8 @@ def nlq_query(user_question):
             return result
 
     result['data']        = data
-    result['explanation'] = build_explanation(result['sql'], data)   # ← fixed typo
+    result['explanation'] = build_explanation(result['sql'], data)
+    result['chart_path']  = generate_chart(user_question, data)
     return result
 
 
@@ -346,6 +349,8 @@ if __name__ == "__main__":
                 print("Note: Required retry to fix SQL")
             print("\nResult preview:")
             print(result["data"].head(3).to_string(index=False))
+            if result["chart_path"]:
+                print(f"Chart: {result['chart_path']}")
             passed += 1
 
     print("\n" + "=" * 55)
