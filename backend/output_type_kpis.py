@@ -2,11 +2,10 @@ import pyarrow as pa
 from database import get_connection
 
 
-def get_kpi09_output_type_publish_rate() -> tuple[pa.Table, str]:
-    """
-    KPI-09: For every Output Type, % of created videos that got published.
-    Formula: (Published Count / Created Count) × 100
-    """
+# ---------------------------------------------------------------------------
+# KPI 23 — Output Type Publish Rate
+# ---------------------------------------------------------------------------
+def get_kpi23_output_type_publish_rate() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
@@ -17,23 +16,22 @@ def get_kpi09_output_type_publish_rate() -> tuple[pa.Table, str]:
             ) AS publish_rate_pct
         FROM (
             SELECT
-                "Output Type"      AS output_type,
-                "Created Count"    AS created_count,
-                "Published Count"  AS published_count
+                "Output Type" AS output_type,
+                "Created Count" AS created_count,
+                "Published Count" AS published_count
             FROM raw_output_type
         )
         GROUP BY output_type
         ORDER BY publish_rate_pct DESC
     """).arrow()
     con.close()
+    return table, "KPI-23 – Output Type Publish Rate (%)"
 
-    return table, "KPI-09 – Output Type Publish Rate (%)"
 
-
-def get_kpi10_output_type_amplification_ratio() -> tuple[pa.Table, str]:
-    """
-    KPI-10: Created / Uploaded ratio per Output Type
-    """
+# ---------------------------------------------------------------------------
+# KPI 24 — Output Type Amplification Ratio
+# ---------------------------------------------------------------------------
+def get_kpi24_output_type_amplification_ratio() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
@@ -44,23 +42,22 @@ def get_kpi10_output_type_amplification_ratio() -> tuple[pa.Table, str]:
             ) AS amplification_ratio
         FROM (
             SELECT
-                "Output Type"      AS output_type,
-                "Created Count"    AS created_count,
-                "Uploaded Count"   AS uploaded_count
+                "Output Type" AS output_type,
+                "Created Count" AS created_count,
+                "Uploaded Count" AS uploaded_count
             FROM raw_output_type
         )
         GROUP BY output_type
         ORDER BY amplification_ratio DESC
     """).arrow()
     con.close()
+    return table, "KPI-24 – Output Type Amplification Ratio"
 
-    return table, "KPI-10 – Output Type Amplification Ratio"
 
-
-def get_kpi19_unknown_output_type_rate() -> tuple[pa.Table, str]:
-    """
-    KPI-19: % of uploaded videos with 'unknown' Output Type
-    """
+# ---------------------------------------------------------------------------
+# KPI 25 — Unknown Output Type Rate
+# ---------------------------------------------------------------------------
+def get_kpi25_unknown_output_type_rate() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         WITH totals AS (
@@ -90,14 +87,13 @@ def get_kpi19_unknown_output_type_rate() -> tuple[pa.Table, str]:
             CASE WHEN g.category = 'unknown' THEN 0 ELSE 1 END
     """).arrow()
     con.close()
+    return table, "KPI-25 – Unknown Output Type Rate (%)"
 
-    return table, "KPI-19 – Unknown Output Type Rate (%)"
 
-
-def get_kpi_output_type_avg_publish_duration() -> tuple[pa.Table, str]:
-    """
-    Average Published Duration per Output Type
-    """
+# ---------------------------------------------------------------------------
+# KPI 26 — Avg Published Duration
+# ---------------------------------------------------------------------------
+def get_kpi26_avg_publish_duration() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
@@ -108,5 +104,4 @@ def get_kpi_output_type_avg_publish_duration() -> tuple[pa.Table, str]:
         ORDER BY avg_publish_duration DESC
     """).arrow()
     con.close()
-
-    return table, "KPI – Avg Published Duration by Output Type"
+    return table, "KPI-26 – Avg Published Duration"
