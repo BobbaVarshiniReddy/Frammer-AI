@@ -127,7 +127,7 @@ def get_kpi08_zero_publish_channel_rate() -> tuple[pa.Table, str]:
             c.category,
             c.channel_count,
             ROUND(100.0 * c.channel_count / NULLIF(t.total_channels, 0), 2) AS "share_pct"
-        FROM raw_channel_platform
+        FROM counts c
         CROSS JOIN total t
         ORDER BY c.category = 'zero_publish' DESC   -- zero_publish row first
     """).arrow()
