@@ -230,7 +230,7 @@ def get_top_users_publish_rate_across_channels() -> tuple[pa.Table, str]:
     return table, "small_multiples"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot- 8 — User Contribution % per Channel 
+# Plot 8 — User Contribution % per Channel 
 # ─────────────────────────────────────────────────────────────────────────────
 def get_user_contribution_per_channel() -> tuple[pa.Table, str]:
     """
@@ -286,7 +286,7 @@ def get_user_contribution_per_channel() -> tuple[pa.Table, str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot- 9 — Top 10 Users by Overall Publish Rate % 
+# Plot 9 — Top 10 Users by Overall Publish Rate % 
 # ─────────────────────────────────────────────────────────────────────────────
 def get_top10_users_by_publish_rate() -> tuple[pa.Table, str]:
     """
