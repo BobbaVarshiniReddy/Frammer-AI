@@ -3,9 +3,9 @@ from database import get_connection
 
 
 # ---------------------------------------------------------------------------
-# KPI 23 — Output Type Publish Rate
+# Plot 1 — Output Type Publish Rate (Bar)
 # ---------------------------------------------------------------------------
-def get_kpi23_output_type_publish_rate() -> tuple[pa.Table, str]:
+def get_output_type_publish_rate_plot() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
@@ -13,7 +13,7 @@ def get_kpi23_output_type_publish_rate() -> tuple[pa.Table, str]:
             ROUND(
                 100.0 * SUM(published_count) / NULLIF(SUM(created_count), 0),
                 2
-            ) AS publish_rate_pct
+            ) AS publish_rate
         FROM (
             SELECT
                 "Output Type" AS output_type,
@@ -22,16 +22,16 @@ def get_kpi23_output_type_publish_rate() -> tuple[pa.Table, str]:
             FROM raw_output_type
         )
         GROUP BY output_type
-        ORDER BY publish_rate_pct DESC
+        ORDER BY publish_rate DESC
     """).arrow()
     con.close()
-    return table, "KPI-23 – Output Type Publish Rate (%)"
+    return table, "bar"
 
 
 # ---------------------------------------------------------------------------
-# KPI 24 — Output Type Amplification Ratio
+# Plot 2 — Output Type Amplification Ratio (Line)
 # ---------------------------------------------------------------------------
-def get_kpi24_output_type_amplification_ratio() -> tuple[pa.Table, str]:
+def get_output_type_amplification_ratio_plot() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
@@ -51,57 +51,53 @@ def get_kpi24_output_type_amplification_ratio() -> tuple[pa.Table, str]:
         ORDER BY amplification_ratio DESC
     """).arrow()
     con.close()
-    return table, "KPI-24 – Output Type Amplification Ratio"
+    return table, "line"
 
 
 # ---------------------------------------------------------------------------
-# KPI 25 — Unknown Output Type Rate
+# Plot 3 — Unknown Output Type Contribution (Donut)
 # ---------------------------------------------------------------------------
-def get_kpi25_unknown_output_type_rate() -> tuple[pa.Table, str]:
-    con = get_connection()
-    table = con.execute("""
-        WITH totals AS (
-            SELECT SUM("Uploaded Count") AS total_uploaded
-            FROM raw_output_type
-        ),
-        grouped AS (
-            SELECT
-                CASE
-                    WHEN LOWER(TRIM("Output Type")) = 'unknown' THEN 'unknown'
-                    ELSE 'known'
-                END AS category,
-                SUM("Uploaded Count") AS uploaded_count
-            FROM raw_output_type
-            GROUP BY 1
-        )
-        SELECT
-            g.category,
-            g.uploaded_count,
-            ROUND(
-                100.0 * g.uploaded_count / NULLIF(t.total_uploaded, 0),
-                2
-            ) AS share_pct
-        FROM grouped g
-        CROSS JOIN totals t
-        ORDER BY
-            CASE WHEN g.category = 'unknown' THEN 0 ELSE 1 END
-    """).arrow()
-    con.close()
-    return table, "KPI-25 – Unknown Output Type Rate (%)"
-
-
-# ---------------------------------------------------------------------------
-# KPI 26 — Avg Published Duration
-# ---------------------------------------------------------------------------
-def get_kpi26_avg_publish_duration() -> tuple[pa.Table, str]:
+def get_unknown_output_type_contribution_plot() -> tuple[pa.Table, str]:
     con = get_connection()
     table = con.execute("""
         SELECT
-            "Output Type" AS output_type,
-            AVG("Published Duration (hh:mm:ss)") AS avg_publish_duration
+            CASE 
+                WHEN LOWER(TRIM("Output Type")) = 'unknown' THEN 'Unknown'
+                ELSE 'Known'
+            END AS category,
+            SUM("Uploaded Count") AS value
         FROM raw_output_type
-        GROUP BY 1
-        ORDER BY avg_publish_duration DESC
+        GROUP BY category
     """).arrow()
     con.close()
-    return table, "KPI-26 – Avg Published Duration"
+    return table, "donut"
+
+
+# ---------------------------------------------------------------------------
+# Plot 4 — Publish Rate vs Amplification Ratio (Scatter)
+# ---------------------------------------------------------------------------
+def get_output_type_publish_vs_amplification_scatter() -> tuple[pa.Table, str]:
+    con = get_connection()
+    table = con.execute("""
+        SELECT
+            output_type,
+            ROUND(
+                100.0 * SUM(published_count) / NULLIF(SUM(created_count), 0),
+                2
+            ) AS publish_rate,
+            ROUND(
+                1.0 * SUM(created_count) / NULLIF(SUM(uploaded_count), 0),
+                2
+            ) AS amplification_ratio
+        FROM (
+            SELECT
+                "Output Type" AS output_type,
+                "Created Count" AS created_count,
+                "Published Count" AS published_count,
+                "Uploaded Count" AS uploaded_count
+            FROM raw_output_type
+        )
+        GROUP BY output_type
+    """).arrow()
+    con.close()
+    return table, "scatter"
