@@ -3,101 +3,44 @@ from database import get_connection
 
 
 # ---------------------------------------------------------------------------
-# Plot 1 — Output Type Publish Rate (Bar)
+# Plot 1 — Output Format Publish Rate (Bar)
 # ---------------------------------------------------------------------------
-def get_output_type_publish_rate_plot() -> tuple[pa.Table, str]:
+def get_output_format_publish_rate_plot():
     con = get_connection()
     table = con.execute("""
         SELECT
-            output_type,
+            "Output Type" AS output_type,
             ROUND(
-                100.0 * SUM(published_count) / NULLIF(SUM(created_count), 0),
+                100.0 * SUM("Published Count") / NULLIF(SUM("Created Count"), 0),
                 2
-            ) AS publish_rate
-        FROM (
-            SELECT
-                "Output Type" AS output_type,
-                "Created Count" AS created_count,
-                "Published Count" AS published_count
-            FROM raw_output_type
-        )
-        GROUP BY output_type
-        ORDER BY publish_rate DESC
-    """).arrow()
-    con.close()
-    return table, "bar"
-
-
-# ---------------------------------------------------------------------------
-# Plot 2 — Output Type Amplification Ratio (Line)
-# ---------------------------------------------------------------------------
-def get_output_type_amplification_ratio_plot() -> tuple[pa.Table, str]:
-    con = get_connection()
-    table = con.execute("""
-        SELECT
-            output_type,
-            ROUND(
-                1.0 * SUM(created_count) / NULLIF(SUM(uploaded_count), 0),
-                2
-            ) AS amplification_ratio
-        FROM (
-            SELECT
-                "Output Type" AS output_type,
-                "Created Count" AS created_count,
-                "Uploaded Count" AS uploaded_count
-            FROM raw_output_type
-        )
-        GROUP BY output_type
-        ORDER BY amplification_ratio DESC
-    """).arrow()
-    con.close()
-    return table, "line"
-
-
-# ---------------------------------------------------------------------------
-# Plot 3 — Unknown Output Type Contribution (Donut)
-# ---------------------------------------------------------------------------
-def get_unknown_output_type_contribution_plot() -> tuple[pa.Table, str]:
-    con = get_connection()
-    table = con.execute("""
-        SELECT
-            CASE 
-                WHEN LOWER(TRIM("Output Type")) = 'unknown' THEN 'Unknown'
-                ELSE 'Known'
-            END AS category,
-            SUM("Uploaded Count") AS value
+            ) AS publish_rate_pct
         FROM raw_output_type
-        GROUP BY category
+        GROUP BY "Output Type"
+        ORDER BY publish_rate_pct DESC
     """).arrow()
     con.close()
-    return table, "donut"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
-# Plot 4 — Publish Rate vs Amplification Ratio (Scatter)
+# Plot 2 — Output Format Mix Distribution (Donut)
 # ---------------------------------------------------------------------------
-def get_output_type_publish_vs_amplification_scatter() -> tuple[pa.Table, str]:
+def get_output_format_mix_distribution_plot():
     con = get_connection()
     table = con.execute("""
-        SELECT
-            output_type,
-            ROUND(
-                100.0 * SUM(published_count) / NULLIF(SUM(created_count), 0),
-                2
-            ) AS publish_rate,
-            ROUND(
-                1.0 * SUM(created_count) / NULLIF(SUM(uploaded_count), 0),
-                2
-            ) AS amplification_ratio
-        FROM (
-            SELECT
-                "Output Type" AS output_type,
-                "Created Count" AS created_count,
-                "Published Count" AS published_count,
-                "Uploaded Count" AS uploaded_count
+        WITH total AS (
+            SELECT SUM("Created Count") AS total_created
             FROM raw_output_type
         )
-        GROUP BY output_type
+        SELECT
+            r."Output Type" AS category,
+            ROUND(
+                100.0 * r."Created Count" / NULLIF(t.total_created, 0),
+                2
+            ) AS value
+        FROM raw_output_type r
+        CROSS JOIN total t
+        ORDER BY value DESC
     """).arrow()
     con.close()
-    return table, "scatter"
+    return [[table, "donut"]]
