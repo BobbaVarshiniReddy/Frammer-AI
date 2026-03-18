@@ -1,26 +1,37 @@
-import duckdb
+"""
+build_tables.py  —  Create all DuckDB tables from raw sources
+=============================================================
+Run once (or whenever raw data changes) to (re)build the
+dimension, bridge, and summary tables used by nlq_pipeline.
+
+Usage:
+    python build_tables.py
+"""
+
 import os
+import duckdb
 from config import DB_PATH
 
-# ── FIX: was "daatbase/frammer.db" (typo) ────────────────────────────────────
+
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 conn = duckdb.connect(DB_PATH)
 
 
-def create_table(conn, table_name, sql):
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def create_table(conn: duckdb.DuckDBPyConnection, table_name: str, sql: str) -> None:
     try:
         conn.execute(sql)
-        count = conn.execute(
-            f"SELECT COUNT(*) FROM {table_name}"
-        ).fetchone()[0]
+        count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"OK  {table_name:30s} {count:>6} rows")
     except Exception as e:
         print(f"ERROR creating table {table_name}: {e}")
 
 
-# ── Helper: convert "hh:mm:ss" text column → total seconds ───────────────────
-def dur_to_secs(col):
-    # Cast to VARCHAR first — DuckDB may infer duration columns as TIME type
+def dur_to_secs(col: str) -> str:
+    """Convert a "hh:mm:ss" text column expression → total integer seconds."""
     return f"""(
         CAST(SPLIT_PART(CAST({col} AS VARCHAR), chr(58), 1) AS INTEGER) * 3600
       + CAST(SPLIT_PART(CAST({col} AS VARCHAR), chr(58), 2) AS INTEGER) * 60
@@ -58,7 +69,6 @@ create_table(conn, "dim_user", """
     ORDER BY "User"
 """)
 
-# ── FIX: missing closing quote on ORDER BY "Input Type  ──────────────────────
 create_table(conn, "dim_input_type", """
     CREATE OR REPLACE TABLE dim_input_type AS
     SELECT
@@ -110,13 +120,6 @@ create_table(conn, "dim_language", """
 # ─────────────────────────────────────────────────────────────────────────────
 # BRIDGE TABLE  —  user × channel
 # ─────────────────────────────────────────────────────────────────────────────
-# ── FIX: removed the broken first stub call to bridge_user_channel ────────────
-# ── FIX: fixed typo "uplaoded_count" → "uploaded_count" ─────────────────────
-# ── FIX: fixed "CREATED COUNT" column name casing ────────────────────────────
-# ── FIX: removed stray "AS published_hours," at wrong position ───────────────
-# ── FIX: added missing "AS published_hours" alias at the correct place ────────
-# ── FIX: added ROUND() wrapper for published_hours (was missing) ──────────────
-# ── FIX: drop_off_count referenced bare "Published Count" — added cu. prefix ──
 
 create_table(conn, "bridge_user_channel", f"""
     CREATE OR REPLACE TABLE bridge_user_channel AS
@@ -407,12 +410,6 @@ create_table(conn, "summary_monthly", f"""
     ORDER BY mc.Month
 """)
 
-# ── NOTE: fact_video_jobs was removed — it had multiple unfixable issues: ─────
-#   • dim_platform table does not exist in this schema
-#   • dc.channel_id = du.channel_id join is wrong (channel not on dim_user)
-#   • Missing AS keyword after CASE WHEN block
-#   • Syntax error: COALESCE(v.Type.'Unknown')
-#   The summary tables above fully replace its analytics use-case.
 
 conn.close()
 print("\nAll tables created successfully.")

@@ -1,26 +1,36 @@
+"""
+schema_builder.py  —  Build the LLM schema text file
+=====================================================
+Reads the DuckDB database and writes a human-readable
+schema description that nlq_pipeline.py loads as context
+for Gemini.
+
+Run after build_tables.py whenever the schema changes:
+    python schema_builder.py
+"""
+
 import duckdb
-import os
 from config import DB_PATH, SCHEMA_PATH
 
-# ── FIX: was hardcoded path, now uses config ──────────────────────────────────
 conn = duckdb.connect(DB_PATH)
 print("Connected to database.")
 
 
-def extract_table_info(conn, table_name):
-    """
-    Reads one table and returns all column information as a dictionary.
-    """
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def extract_table_info(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
+    """Return column metadata for one table."""
     info = {}
     columns = conn.execute(f"DESCRIBE {table_name}").df()
 
     for _, row in columns.iterrows():
-        col_name = row['column_name']
-        col_type = row['column_type']
-        col_info = {'type': col_type}
+        col_name = row["column_name"]
+        col_type = row["column_type"]
+        col_info = {"type": col_type}
 
-        # Text columns → get exact unique values (prevents hallucination)
-        if 'VARCHAR' in col_type:
+        if "VARCHAR" in col_type:
             try:
                 unique = conn.execute(f"""
                     SELECT DISTINCT {col_name}
@@ -35,14 +45,12 @@ def extract_table_info(conn, table_name):
                     WHERE {col_name} IS NULL
                 """).fetchone()[0]
 
-                col_info['unique_values'] = unique
-                col_info['null_count']    = nulls
-
+                col_info["unique_values"] = unique
+                col_info["null_count"]    = nulls
             except Exception as e:
-                col_info['note'] = str(e)
+                col_info["note"] = str(e)
 
-        # Integer columns → unique values if small set, else range
-        elif 'INTEGER' in col_type or 'BIGINT' in col_type:
+        elif "INTEGER" in col_type or "BIGINT" in col_type:
             try:
                 count_unique = conn.execute(f"""
                     SELECT COUNT(DISTINCT {col_name}) FROM {table_name}
@@ -55,20 +63,18 @@ def extract_table_info(conn, table_name):
                         WHERE {col_name} IS NOT NULL
                         ORDER BY {col_name}
                     """).df()[col_name].tolist()
-                    col_info['unique_values'] = unique
+                    col_info["unique_values"] = unique
                 else:
                     stats = conn.execute(f"""
                         SELECT MIN({col_name}), MAX({col_name})
                         FROM {table_name}
                     """).fetchone()
-                    col_info['min'] = stats[0]
-                    col_info['max'] = stats[1]
-
+                    col_info["min"] = stats[0]
+                    col_info["max"] = stats[1]
             except Exception as e:
-                col_info['note'] = str(e)
+                col_info["note"] = str(e)
 
-        # Double/Float columns → range + average
-        elif 'DOUBLE' in col_type or 'FLOAT' in col_type:
+        elif "DOUBLE" in col_type or "FLOAT" in col_type:
             try:
                 stats = conn.execute(f"""
                     SELECT
@@ -78,33 +84,31 @@ def extract_table_info(conn, table_name):
                     FROM {table_name}
                     WHERE {col_name} IS NOT NULL
                 """).fetchone()
-                col_info['min'] = stats[0]
-                col_info['max'] = stats[1]
-                col_info['avg'] = stats[2]
-
+                col_info["min"] = stats[0]
+                col_info["max"] = stats[1]
+                col_info["avg"] = stats[2]
             except Exception as e:
-                col_info['note'] = str(e)
+                col_info["note"] = str(e)
 
         info[col_name] = col_info
 
     return info
 
 
-def build_table_text(table_name, table_info, row_count):
+def build_table_text(table_name: str, table_info: dict, row_count: int) -> str:
     text  = f"\nTable: {table_name} ({row_count} rows)\n"
     text += "-" * 45 + "\n"
 
     for col_name, info in table_info.items():
         text += f"\n  {col_name} ({info['type']})"
 
-        if 'unique_values' in info:
+        if "unique_values" in info:
             text += f"\n    Exact values: {info['unique_values']}"
-            if info.get('null_count', 0) > 0:
+            if info.get("null_count", 0) > 0:
                 text += f"\n    Nulls: {info['null_count']}"
-
-        elif 'min' in info:
+        elif "min" in info:
             text += f"\n    Range: {info['min']} to {info['max']}"
-            if 'avg' in info:
+            if "avg" in info:
                 text += f", avg: {info['avg']}"
 
         text += "\n"
@@ -112,8 +116,11 @@ def build_table_text(table_name, table_info, row_count):
     return text
 
 
-def build_complete_schema(conn):
+# ─────────────────────────────────────────────────────────────────────────────
+# SCHEMA BUILDER
+# ─────────────────────────────────────────────────────────────────────────────
 
+def build_complete_schema(conn: duckdb.DuckDBPyConnection) -> str:
     schema = """
 ================================================
 DATABASE: DuckDB — Frammer AI Analytics
@@ -143,21 +150,21 @@ TABLES
 """
 
     preferred_order = [
-        'bridge_user_channel',
-        'dim_channel',
-        'dim_user',
-        'dim_input_type',
-        'dim_output_type',
-        'dim_language',
-        'summary_user',
-        'summary_channel',
-        'summary_monthly',
-        'summary_input_type',
-        'summary_output_type',
-        'summary_language',
+        "bridge_user_channel",
+        "dim_channel",
+        "dim_user",
+        "dim_input_type",
+        "dim_output_type",
+        "dim_language",
+        "summary_user",
+        "summary_channel",
+        "summary_monthly",
+        "summary_input_type",
+        "summary_output_type",
+        "summary_language",
     ]
 
-    all_tables  = conn.execute("SHOW TABLES").df()['name'].tolist()
+    all_tables   = conn.execute("SHOW TABLES").df()["name"].tolist()
     clean_tables = [t for t in preferred_order if t in all_tables]
 
     for table_name in clean_tables:
@@ -369,15 +376,18 @@ Example 10: Which user works in most channels
     return schema
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
 schema_text = build_complete_schema(conn)
 
-# ── FIX: now uses SCHEMA_PATH from config instead of hardcoded path ───────────
 with open(SCHEMA_PATH, "w", encoding="utf-8") as f:
     f.write(schema_text)
 
 print(f"\nLLM schema saved to {SCHEMA_PATH}")
 print("Schema preview:")
-for line in schema_text.split('\n')[:30]:
+for line in schema_text.split("\n")[:30]:
     print(line)
 
 conn.close()
