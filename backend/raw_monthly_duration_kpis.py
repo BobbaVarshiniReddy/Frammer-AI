@@ -6,15 +6,19 @@ import pyarrow as pa
 from database import get_connection
 
 
-def get_kpi05_total_content_hours_processed() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 05: Total Content Hours Processed
+#-------------------------------------------------------------------------
+def get_kpi05_total_content_hours_processed() -> list:
     """
     KPI 05: Total Content Hours Processed.
     Formula: SUM(parse_hrs("Total Created Duration"))
 
-    Returns
-    -------
-    table       : columns ["total_content_hours"]
-    description : str
+    Returns multiple chart options in list format:
+    [
+        [table, "chart_type"],
+        ...
+    ]
     """
     con = get_connection()
     table = con.execute("""
@@ -23,40 +27,48 @@ def get_kpi05_total_content_hours_processed() -> tuple[pa.Table, str]:
         FROM month_wise_duration
     """).arrow()
     con.close()
-    return table, "KPI 05 – Total Content Hours Processed"
+
+    return [
+        [table, "kpi_card"],  # simple KPI display
+        [table, "bar"]        # optional bar for visual emphasis
+    ]
 
 
-def get_kpi05_monthly_created_duration_trend() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 05 Trend: Monthly Created Duration
+#-------------------------------------------------------------------------
+def get_kpi05_monthly_created_duration_trend() -> list:
     """
     KPI 05 Trend: Monthly Created Duration Trend.
     Formula: SUM(parse_hrs("Total Created Duration")) per month
 
-    Returns
-    -------
-    table       : columns ["Month", "total_created_hours"]
-    description : str
+    Returns multiple chart options in list format
     """
     con = get_connection()
     table = con.execute("""
         SELECT
-            "Month"                                                   AS "Month",
-            SUM(parse_hrs("Total Created Duration"))                  AS "total_created_hours"
+            "Month" AS "Month",
+            SUM(parse_hrs("Total Created Duration")) AS "total_created_hours"
         FROM month_wise_duration
         GROUP BY "Month"
         ORDER BY strptime("Month", '%b, %Y')
     """).arrow()
     con.close()
-    return table, "KPI 05 – Monthly Created Duration Trend"
+
+    return [
+        [table, "line"],       # trend over months
+        [table, "bar"],        # monthly comparison
+        [table, "area"]        # area chart for cumulative feeling
+    ]
 
 
-def get_kpi03_mom_duration_growth() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 03: MoM Duration Growth (%)
+#-------------------------------------------------------------------------
+def get_kpi03_mom_duration_growth() -> list:
     """
     KPI 03: MoM Duration Growth (%)
-
-    Returns
-    -------
-    table       : columns ["Month", "current_month_hours", "last_month_hours", "mom_growth_pct"]
-    description : str
+    Returns multiple chart options in list format
     """
     con = get_connection()
     table = con.execute("""
@@ -89,4 +101,9 @@ def get_kpi03_mom_duration_growth() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b, %Y')
     """).arrow()
     con.close()
-    return table, "KPI 03 – MoM Duration Growth (%)"
+
+    return [
+        [table, "line"],    # trend line of MoM %
+        [table, "bar"],     # bar for visual comparison
+        [table, "area"]     # area chart for growth visualization
+    ]

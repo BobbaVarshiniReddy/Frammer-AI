@@ -8,15 +8,10 @@ from database import get_connection
 #-------------------------------------------------------------------------
 # Plot 1 - Total Created vs Month
 #-------------------------------------------------------------------------
-
-def get_total_created_vs_month() -> tuple[pa.Table, str]:
+def get_total_created_vs_month() -> list:
     """
     Plot 1 : Total Created vs Month (time series)
-
-    Returns
-    -------
-    table      : columns ["Month", "Total Created"]
-    chart_type : "line"
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -27,23 +22,21 @@ def get_total_created_vs_month() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "line"
+
+    return [
+        [table, "line"],   # trend line
+        [table, "bar"],    # bar comparison
+        [table, "area"]    # area view
+    ]
 
 
 #-------------------------------------------------------------------------
 # Plot 2 - Total Uploaded vs Month
 #-------------------------------------------------------------------------
-
-
-def get_total_uploaded_vs_month() -> tuple[pa.Table, str]:
+def get_total_uploaded_vs_month() -> list:
     """
     Plot 2 : Total Uploaded vs Month (time series)
-
-    Returns
-    -------
-    table      : columns ["Month", "Total Uploaded"]
-    chart_type : "line"
-
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -54,21 +47,21 @@ def get_total_uploaded_vs_month() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "line"
+
+    return [
+        [table, "line"],
+        [table, "bar"],
+        [table, "area"]
+    ]
+
 
 #-------------------------------------------------------------------------
 # Plot 3 - Total Published vs Month
 #-------------------------------------------------------------------------
-
-def get_total_published_vs_month() -> tuple[pa.Table, str]:
+def get_total_published_vs_month() -> list:
     """
     Plot 3 : Total Published vs Month (time series)
-
-    Returns
-    -------
-    table      : columns ["Month", "Total Published"]
-    chart_type : "line"
-
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -79,20 +72,21 @@ def get_total_published_vs_month() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "line"
+
+    return [
+        [table, "line"],
+        [table, "bar"],
+        [table, "area"]
+    ]
+
 
 #-------------------------------------------------------------------------
 # Plot 4 - Month over Month Increase in Published
 #-------------------------------------------------------------------------
-
-def get_mom_increase_published() -> tuple[pa.Table, str]:
+def get_mom_increase_published() -> list:
     """
     Plot 4 : Month-over-Month increase in Published
-
-    Returns
-    -------
-    table      : columns ["Month", "MoM_Published_Increase"]
-    chart_type : "line"
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -112,20 +106,21 @@ def get_mom_increase_published() -> tuple[pa.Table, str]:
         ORDER BY month_date
     """).arrow()
     con.close()
-    return table, "line"
+
+    return [
+        [table, "line"],
+        [table, "bar"],
+        [table, "area"]
+    ]
+
 
 #-------------------------------------------------------------------------
 # Plot 5 - Month over Month Increase in Uploaded
 #-------------------------------------------------------------------------
-
-def get_mom_increase_uploaded() -> tuple[pa.Table, str]:
+def get_mom_increase_uploaded() -> list:
     """
-    Plot: Month-over-Month increase in Uploads
-
-    Returns
-    -------
-    table      : columns ["Month", "MoM_Upload_Increase"]
-    chart_type : "line"
+    Plot 5 : Month-over-Month increase in Uploads
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -145,4 +140,9 @@ def get_mom_increase_uploaded() -> tuple[pa.Table, str]:
         ORDER BY month_date
     """).arrow()
     con.close()
-    return table, "line"
+
+    return [
+        [table, "line"],
+        [table, "bar"],
+        [table, "area"]
+    ]
