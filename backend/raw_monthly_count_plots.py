@@ -19,7 +19,7 @@ def get_total_created_vs_month() -> list:
             "Month"            AS "Month",
             "Total Created"    AS "Total Created"
         FROM raw_monthly_count
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
@@ -44,7 +44,7 @@ def get_total_uploaded_vs_month() -> list:
             "Month"             AS "Month",
             "Total Uploaded"    AS "Total Uploaded"
         FROM raw_monthly_count
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
@@ -69,7 +69,7 @@ def get_total_published_vs_month() -> list:
             "Month"              AS "Month",
             "Total Published"    AS "Total Published"
         FROM raw_monthly_count
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
@@ -94,7 +94,7 @@ def get_mom_increase_published() -> list:
             SELECT
                 "Month",
                 "Total Published",
-                strptime("Month", '%b %y') AS month_date
+                strptime("Month", '%b, %y') AS month_date
             FROM raw_monthly_count
         )
         SELECT
@@ -128,7 +128,7 @@ def get_mom_increase_uploaded() -> list:
             SELECT
                 "Month",
                 "Total Uploaded",
-                strptime("Month", '%b %y') AS month_date
+                strptime("Month", '%b, %y') AS month_date
             FROM raw_monthly_count
         )
         SELECT
