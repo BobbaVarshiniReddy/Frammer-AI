@@ -5,10 +5,15 @@ kpis.py
 import pyarrow as pa
 from database import get_connection
 
-def get_kpi03_mom_upload_growth() -> tuple[pa.Table, str]:
+
+#-------------------------------------------------------------------------
+# KPI 03: MoM Upload Growth Rate (%)
+#-------------------------------------------------------------------------
+def get_kpi03_mom_upload_growth() -> list:
     """
     MoM Upload Growth Rate:
     (This Month Uploaded − Last Month Uploaded) ÷ Last Month × 100
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -35,13 +40,22 @@ def get_kpi03_mom_upload_growth() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "KPI 03 - MoM Upload Growth Rate (%)"
+
+    return [
+        [table, "line"],  # trend line
+        [table, "bar"],   # monthly comparison
+        [table, "area"]   # growth visualization
+    ]
 
 
-def get_kpi07_monthly_publish_rate() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 07: Monthly Publish Rate (%)
+#-------------------------------------------------------------------------
+def get_kpi07_monthly_publish_rate() -> list:
     """
     Monthly Publish Rate:
     Total Published ÷ Total Created × 100
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -57,13 +71,22 @@ def get_kpi07_monthly_publish_rate() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "KPI 07 - Monthly Publish Rate Trend (%)"
+
+    return [
+        [table, "line"],  # trend
+        [table, "bar"],   # comparison
+        [table, "area"]   # area view
+    ]
 
 
-def get_kpi01_overall_publish_rate() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 01: Overall Publish Rate (%)
+#-------------------------------------------------------------------------
+def get_kpi01_overall_publish_rate() -> list:
     """
     Overall Publish Rate:
     Running Published ÷ Running Created × 100
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -89,13 +112,22 @@ def get_kpi01_overall_publish_rate() -> tuple[pa.Table, str]:
         ORDER BY month_date
     """).arrow()
     con.close()
-    return table, "KPI 01 - Overall Publish Rate (%)"
+
+    return [
+        [table, "line"],   # cumulative trend
+        [table, "area"],   # area view
+        [table, "bar"]     # monthly bar comparison
+    ]
 
 
-def get_kpi02_monthly_amplification_ratio() -> tuple[pa.Table, str]:
+#-------------------------------------------------------------------------
+# KPI 02: Monthly Amplification Ratio
+#-------------------------------------------------------------------------
+def get_kpi02_monthly_amplification_ratio() -> list:
     """
     Amplification Ratio:
     Total Created ÷ Total Uploaded
+    Returns multiple chart options
     """
     con = get_connection()
     table = con.execute("""
@@ -111,4 +143,9 @@ def get_kpi02_monthly_amplification_ratio() -> tuple[pa.Table, str]:
         ORDER BY strptime("Month", '%b %y')
     """).arrow()
     con.close()
-    return table, "KPI 02 - Monthly Amplification Ratio"
+
+    return [
+        [table, "line"],   # trend
+        [table, "bar"],    # comparison
+        [table, "area"]    # area visualization
+    ]
