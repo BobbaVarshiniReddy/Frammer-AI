@@ -8,17 +8,11 @@ from database import get_connection
 #-------------------------------------------------------------------------
 # Plot 1 - Grouped Bar Chart (Durations in Hours)
 #-------------------------------------------------------------------------
-
-def get_grouped_duration_vs_month() -> tuple[pa.Table, str]:
+def get_grouped_duration_vs_month() -> list:
     """
     Plot 6 : Grouped Bar Chart (Uploaded vs Created vs Published)
-
-    values are in HOURS
-
-    Returns
-    -------
-    table      : ["Month", "Uploaded_hours", "Created_hours", "Published_hours"]
-    chart_type : "grouped_bar"
+    Values are in HOURS
+    Returns multiple chart options in list format
     """
     con = get_connection()
     table = con.execute("""
@@ -57,23 +51,21 @@ def get_grouped_duration_vs_month() -> tuple[pa.Table, str]:
         ORDER BY month_date
     """).arrow()
     con.close()
-    return table, "grouped_bar"
+
+    return [
+        [table, "grouped_bar"],  # comparison view
+        [table, "line"]          # trend view
+    ]
 
 
 #-------------------------------------------------------------------------
 # Plot 2 - Top 5 Months with Highest Upload Duration (Hours)
 #-------------------------------------------------------------------------
-
-def get_top5_uploaded_duration() -> tuple[pa.Table, str]:
+def get_top5_uploaded_duration() -> list:
     """
     Plot 7 : Top 5 Months by Upload Duration
-
     Values are in HOURS
-
-    Returns
-    -------
-    table      : ["Month", "Uploaded_hours"]
-    chart_type : "bar"
+    Returns multiple chart options in list format
     """
     con = get_connection()
     table = con.execute("""
@@ -92,23 +84,21 @@ def get_top5_uploaded_duration() -> tuple[pa.Table, str]:
         LIMIT 5
     """).arrow()
     con.close()
-    return table, "bar"
+
+    return [
+        [table, "bar"],  # top comparison
+        [table, "pie"]   # distribution view
+    ]
 
 
 #-------------------------------------------------------------------------
 # Plot 3 - Top 5 Months with Highest Published Duration (Hours)
 #-------------------------------------------------------------------------
-
-def get_top5_published_duration() -> tuple[pa.Table, str]:
+def get_top5_published_duration() -> list:
     """
     Plot 8 : Top 5 Months by Published Duration
-
     Values are in HOURS
-
-    Returns
-    -------
-    table      : ["Month", "Published_hours"]
-    chart_type : "bar"
+    Returns multiple chart options in list format
     """
     con = get_connection()
     table = con.execute("""
@@ -127,5 +117,8 @@ def get_top5_published_duration() -> tuple[pa.Table, str]:
         LIMIT 5
     """).arrow()
     con.close()
-    return table, "bar"
 
+    return [
+        [table, "bar"],  # top comparison
+        [table, "pie"]   # distribution view
+    ]
