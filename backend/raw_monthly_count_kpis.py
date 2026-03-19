@@ -22,7 +22,7 @@ def get_kpi03_mom_upload_growth() -> list:
                 "Month",
                 "Total Uploaded",
                 LAG("Total Uploaded") OVER (
-                    ORDER BY strptime("Month", '%b %y')
+                    ORDER BY strptime("Month", '%b, %y')
                 ) AS "Last Month Uploaded"
             FROM raw_monthly_count
         )
@@ -37,7 +37,7 @@ def get_kpi03_mom_upload_growth() -> list:
                 2
             ) AS "MoM_Upload_Growth_%"
         FROM lagged_data
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
@@ -68,7 +68,7 @@ def get_kpi07_monthly_publish_rate() -> list:
                 2
             ) AS "Monthly_Publish_Rate_%"
         FROM raw_monthly_count
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
@@ -95,7 +95,7 @@ def get_kpi01_overall_publish_rate() -> list:
                 "Month",
                 "Total Created",
                 "Total Published",
-                strptime("Month", '%b %y') AS month_date
+                strptime("Month", '%b, %y') AS month_date
             FROM raw_monthly_count
         )
         SELECT
@@ -140,7 +140,7 @@ def get_kpi02_monthly_amplification_ratio() -> list:
                 2
             ) AS "Amplification_Ratio"
         FROM raw_monthly_count
-        ORDER BY strptime("Month", '%b %y')
+        ORDER BY strptime("Month", '%b, %y')
     """).arrow()
     con.close()
 
