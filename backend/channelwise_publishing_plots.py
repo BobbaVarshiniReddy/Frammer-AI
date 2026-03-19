@@ -39,7 +39,7 @@ def get_published_count_per_platform() -> tuple[pa.Table, str]:
         ORDER BY total_published DESC
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ def get_platform_distribution_pct() -> tuple[pa.Table, str]:
         ORDER BY "distribution_pct" DESC
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ def get_zero_vs_active_channels() -> tuple[pa.Table, str]:
         ORDER BY category = 'zero_publish' DESC
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ def get_top_channels_by_publishes(top_n: int = 10) -> tuple[pa.Table, str]:
         LIMIT {top_n}
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ def get_channel_platform_heatmap() -> tuple[pa.Table, str]:
         ORDER BY "Channels", platform
     """).arrow()
     con.close()
-    return table, "heatmap"
+    return [[table, "heatmap"]]
 
 
 # ---------------------------------------------------------------------------

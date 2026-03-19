@@ -39,7 +39,7 @@ def get_kpi14_platform_publish_distribution() -> tuple[pa.Table, str]:
         ORDER BY "distribution_pct" DESC
     """).arrow()
     con.close()
-    return table, "KPI-14 – Platform Publish Distribution (%)"
+    return [[table, "KPI-14 – Platform Publish Distribution (%)"]]
 
 
 def get_kpi08_zero_publish_channel_count() -> tuple[pa.Table, str]:
@@ -81,7 +81,7 @@ def get_kpi08_zero_publish_channel_count() -> tuple[pa.Table, str]:
         ORDER BY category = 'zero_publish' DESC   -- zero_publish row first
     """).arrow()
     con.close()
-    return table, "KPI-08 – Zero-Publish Channel Count (platform view)"
+    return [[table, "KPI-08 – Zero-Publish Channel Count (platform view)"]]
 
 
 def get_kpi08_zero_publish_channel_rate() -> tuple[pa.Table, str]:
@@ -113,7 +113,7 @@ def get_kpi08_zero_publish_channel_rate() -> tuple[pa.Table, str]:
                     ) = 0 THEN 'zero_publish'
                     ELSE 'active'
                 END AS category
-            FROM raw_channels
+            FROM raw_channel_platform
         ),
         counts AS (
             SELECT category, COUNT(*) AS channel_count
@@ -132,4 +132,4 @@ def get_kpi08_zero_publish_channel_rate() -> tuple[pa.Table, str]:
         ORDER BY c.category = 'zero_publish' DESC   -- zero_publish row first
     """).arrow()
     con.close()
-    return table, "KPI-08 – Zero-Publish Channel Rate (%)"
+    return [[table, "KPI-08 – Zero-Publish Channel Rate (%)"]]
