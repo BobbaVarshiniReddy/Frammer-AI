@@ -1,5 +1,5 @@
 DB_PATH = "./database/frammer.db"
 DATA_PATH = "./data/"
 SCHEMA_PATH = "./llm_schema.txt"
-GEMINI_API_KEY = "YOUR_API_KEY_HERE"
+GEMINI_API_KEY = ""
 GEMINI_MODEL = "gemini-2.5-flash"

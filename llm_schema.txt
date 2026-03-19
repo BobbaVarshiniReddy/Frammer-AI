@@ -5,428 +5,765 @@ DATE RANGE: March 2025 to February 2026
 ================================================
 
 PLATFORM CONTEXT:
-Frammer AI converts long-form video content into short-form outputs.
+Frammer AI converts long-form video content
+into short-form outputs.
 
 TERMINOLOGY:
-Uploaded  = raw content uploaded to Frammer AI
-Created   = output content created by Frammer AI
-            (Full package, Key moments, Chapters,
-             My Key moments, Summary)
-Published = content published by users on social media
+Uploaded   = raw content uploaded to Frammer AI
+Created    = output content created by Frammer AI
+             (Full package, Key moments, Chapters,
+              My Key moments, Summary)
+Published  = content published by users on
+             social media platforms
 
-KEY METRICS:
-publish_rate_pct = published / created * 100
-drop_off_count   = created - published
-creation_ratio   = created / uploaded
-uploaded_hours   = total hours of uploaded content
-created_hours    = total hours of created content
+KEY METRIC DEFINITIONS:
+publish_rate_pct  = published / created * 100
+drop_off_count    = created - published
+creation_ratio    = created / uploaded
+uploaded_hours    = total hours of uploaded content
+created_hours     = total hours of created content
+
+================================================
+KPI REFERENCE — NAME TO COMPUTATION MAPPING
+================================================
+
+When a user mentions any of these KPI names,
+keyword phrases, or asks a semantically similar
+question, compute using the formula shown and
+the table indicated.
+
+─────────────────────────────────────────
+OVERALL PUBLISH RATE
+─────────────────────────────────────────
+Also triggered by: "how much content gets
+published", "what % is published",
+"overall publishing performance"
+Formula: SUM(published_count) * 100.0
+         / NULLIF(SUM(created_count), 0)
+Table: summary_channel (sum across all rows)
+
+─────────────────────────────────────────
+CONTENT AMPLIFICATION RATIO
+─────────────────────────────────────────
+Also triggered by: "amplification", "how many
+outputs per upload", "creation multiplier",
+"how much does frammer multiply content"
+Formula: SUM(created_count)
+         / NULLIF(SUM(uploaded_count), 0)
+Table: summary_channel (sum across all rows)
+
+─────────────────────────────────────────
+MONTH-OVER-MONTH UPLOAD GROWTH RATE
+─────────────────────────────────────────
+Also triggered by: "MoM growth", "monthly growth",
+"upload trend", "how uploads changed month to month"
+Formula: (this_month_uploaded - prev_month_uploaded)
+         / NULLIF(prev_month_uploaded, 0) * 100
+         Use LAG() window function over month order
+Table: summary_monthly
+
+─────────────────────────────────────────
+DROP-OFF VOLUME
+─────────────────────────────────────────
+Also triggered by: "how many not published",
+"unpublished content", "content that never went live",
+"gap between created and published"
+Formula: SUM(created_count) - SUM(published_count)
+Table: summary_channel
+
+─────────────────────────────────────────
+TOTAL CONTENT HOURS
+─────────────────────────────────────────
+Also triggered by: "total hours processed",
+"how many hours of content", "content volume in hours"
+Formula: SUM(created_hours) or SUM(uploaded_hours)
+         depending on context
+Table: summary_channel (sum across all rows)
+
+─────────────────────────────────────────
+PUBLISH RATE BY CHANNEL
+─────────────────────────────────────────
+Also triggered by: "channel publish rate",
+"which channel publishes most", "channel-wise
+publishing performance"
+Formula: published_count * 100.0
+         / NULLIF(created_count, 0) per channel
+Table: summary_channel
+
+─────────────────────────────────────────
+MONTHLY PUBLISH RATE TREND
+─────────────────────────────────────────
+Also triggered by: "how publish rate changed over
+time", "monthly publishing trend", "best month
+for publishing"
+Formula: published_count * 100.0
+         / NULLIF(created_count, 0) per month
+Table: summary_monthly
+
+─────────────────────────────────────────
+ZERO-PUBLISH CHANNEL COUNT
+─────────────────────────────────────────
+Also triggered by: "channels with no publishes",
+"inactive channels", "channels that never published"
+Formula: COUNT(*) WHERE published_count = 0
+Table: summary_channel
+
+─────────────────────────────────────────
+INPUT TYPE PUBLISH RATE
+─────────────────────────────────────────
+Also triggered by: "which content type publishes
+most", "publish rate by input", "interview vs speech
+publishing"
+Formula: published_count * 100.0
+         / NULLIF(created_count, 0) per input_type
+Table: summary_input_type
+
+─────────────────────────────────────────
+INPUT TYPE AMPLIFICATION RATIO
+─────────────────────────────────────────
+Also triggered by: "which input type creates most
+outputs", "content type multiplier",
+"amplification by content type"
+Formula: created_count / NULLIF(uploaded_count, 0)
+         per input_type
+Table: summary_input_type
+
+─────────────────────────────────────────
+OUTPUT FORMAT PUBLISH RATE
+─────────────────────────────────────────
+Also triggered by: "which output format gets
+published most", "reels vs chapters publishing",
+"best performing output type"
+Formula: published_count * 100.0
+         / NULLIF(created_count, 0) per output_type
+Table: summary_output_type
+
+─────────────────────────────────────────
+OUTPUT FORMAT MIX DISTRIBUTION
+─────────────────────────────────────────
+Also triggered by: "output type breakdown",
+"which format is created most", "mix of outputs",
+"share of each output type"
+Formula: created_count * 100.0
+         / NULLIF(SUM(created_count) OVER (), 0)
+         per output_type
+Table: summary_output_type
+
+─────────────────────────────────────────
+LANGUAGE PUBLISH RATE
+─────────────────────────────────────────
+Also triggered by: "hindi vs english publishing",
+"which language publishes more",
+"publish rate by language"
+Formula: published_count * 100.0
+         / NULLIF(created_count, 0) per language
+Table: summary_language
+
+─────────────────────────────────────────
+LANGUAGE UPLOAD SHARE
+─────────────────────────────────────────
+Also triggered by: "language breakdown of uploads",
+"how much content is in hindi", "language mix",
+"share of each language"
+Formula: uploaded_count * 100.0
+         / NULLIF(SUM(uploaded_count) OVER (), 0)
+         per language
+Table: summary_language
+
+─────────────────────────────────────────
+PLATFORM DISTRIBUTION
+─────────────────────────────────────────
+Also triggered by: "which platform gets most
+content", "youtube vs reels vs shorts",
+"where is content being published",
+"social media platform breakdown",
+"publishing destinations"
+Formula: SUM(publish_count) per platform_name,
+         then share = count / NULLIF(total, 0) * 100
+Table: summary_platform
+⚠ STANDALONE TABLE — only use for platform
+  questions. Do NOT use for channel/user questions.
+
+─────────────────────────────────────────
+USER PUBLISH RATE
+─────────────────────────────────────────
+Also triggered by: "which user publishes most",
+"user-wise publishing", "top publishers by user"
+Formula: publish_rate_pct column directly
+Table: summary_user (total across all channels)
+       OR bridge_user_channel (within a channel)
+
+─────────────────────────────────────────
+USER UPLOAD VOLUME RANK
+─────────────────────────────────────────
+Also triggered by: "top uploaders", "who uploads
+most", "user upload ranking", "most active users"
+Formula: ORDER BY total_uploaded_count DESC
+         or total_uploaded_hours DESC
+Table: summary_user
+
+─────────────────────────────────────────
+CHANNEL × USER METRIC
+─────────────────────────────────────────
+Also triggered by: "user activity in a channel",
+"top users in channel X", "how does user Y perform
+in each channel", "channel and user breakdown"
+Formula: row-level publish_rate_pct per
+         channel_name + user_name pair
+Table: bridge_user_channel
+
+─────────────────────────────────────────
+UNKNOWN TEAM NAME RATE
+─────────────────────────────────────────
+Also triggered by: "unclassified content",
+"missing team names", "what % has unknown team",
+"team name data quality"
+Formula: unknown_team_pct column directly
+Table: data_quality (single-row summary)
+       OR: COUNT_IF(team_name = 'Unknown') * 100.0
+           / COUNT(*) FROM fact_video_jobs
+⚠ STANDALONE TABLE — use data_quality or
+  fact_video_jobs only. Not available in
+  summary tables.
+
+─────────────────────────────────────────
+PUBLISHED URL COMPLETENESS RATE
+─────────────────────────────────────────
+Also triggered by: "missing published URLs",
+"url data quality", "published videos without
+a link", "how complete is the URL data"
+Formula: url_completeness_pct column directly
+Table: data_quality (single-row summary)
+⚠ STANDALONE TABLE — use data_quality or
+  fact_video_jobs only.
+
+─────────────────────────────────────────
+QA / TEST ACCOUNT ACTIVITY
+─────────────────────────────────────────
+Also triggered by: "QA account uploads",
+"test account activity", "non-production users",
+"how much content came from QA accounts"
+Formula: COUNT(*) WHERE uploaded_by LIKE 'QA-%'
+         OR uploaded_by IN known test accounts
+Table: fact_video_jobs
+⚠ STANDALONE TABLE — use fact_video_jobs only.
+
+─────────────────────────────────────────
+DUPLICATE VIDEO ID COUNT
+─────────────────────────────────────────
+Also triggered by: "duplicate videos",
+"repeated video IDs", "data integrity check",
+"how many duplicate records"
+Formula: duplicate_video_ids column directly
+Table: data_quality (single-row summary)
+⚠ STANDALONE TABLE — use data_quality only.
 
 ================================================
 TABLES
 ================================================
 
+--- CORE TABLES ---
+(Use for all general questions)
+
 Table: bridge_user_channel (224 rows)
 ---------------------------------------------
 
-  user_id (BIGINT)
-    Range: 1 to 45
+ user_id (BIGINT)
+  Range: 1 to 45
 
-  channel_id (BIGINT)
-    Range: 1 to 18
+ channel_id (BIGINT)
+  Range: 1 to 18
 
-  user_name (VARCHAR)
-    Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
+ user_name (VARCHAR)
+  Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
 
-  channel_name (VARCHAR)
-    Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'M', 'O', 'P', 'Q', 'R']
+ channel_name (VARCHAR)
+  Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'M', 'O', 'P', 'Q', 'R']
 
-  uploaded_count (BIGINT)
-    Range: 0 to 247
+ uploaded_count (BIGINT)
+  Range: 0 to 247
 
-  created_count (BIGINT)
-    Range: 1 to 1029
+ created_count (BIGINT)
+  Range: 1 to 1029
 
-  published_count (BIGINT)
-    Exact values: [0, 1, 2, 3, 4, 5, 6, 7, 10, 18]
+ published_count (BIGINT)
+  Exact values: [0, 1, 2, 3, 4, 5, 6, 7, 10, 18]
 
-  drop_off_count (BIGINT)
-    Range: 1 to 1011
+ drop_off_count (BIGINT)
+  Range: 1 to 1011
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 44.44, avg: 0.91
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 44.44, avg: 0.91
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['0:00:00', '0:00:14', '0:00:19', '0:00:37', '0:00:40', '0:00:44', '0:01:00', '0:01:09', '0:01:12', '0:02:10', '0:02:24', '0:02:46', '0:03:00', '0:03:04', '0:03:27', '0:03:28', '0:03:33', '0:04:20', '0:04:21', '0:04:23', '0:04:29', '0:04:42', '0:05:06', '0:05:16', '0:05:19', '0:06:23', '0:06:44', '0:06:53', '0:07:18', '0:07:49']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['0:00:00', '0:00:14', '0:00:19', '0:00:37', '0:00:40', '0:00:44', '0:01:00', '0:01:09', '0:01:12', '0:02:10', '0:02:24', '0:02:46', '0:03:00', '0:03:04', '0:03:27', '0:03:28', '0:03:33', '0:04:20', '0:04:21', '0:04:23', '0:04:29', '0:04:42', '0:05:06', '0:05:16', '0:05:19', '0:06:23', '0:06:44', '0:06:53', '0:07:18', '0:07:49']
 
-  created_duration_text (VARCHAR)
-    Exact values: ['0:00:00', '0:00:07', '0:00:15', '0:00:19', '0:00:24', '0:00:31', '0:00:32', '0:00:35', '0:00:44', '0:00:53', '0:01:00', '0:01:08', '0:01:09', '0:01:13', '0:01:16', '0:01:26', '0:01:38', '0:01:39', '0:01:41', '0:02:10', '0:02:24', '0:03:04', '0:03:15', '0:03:28', '0:03:33', '0:03:47', '0:05:16', '0:05:19', '0:05:50', '0:06:22']
+ created_duration_text (VARCHAR)
+  Exact values: ['0:00:00', '0:00:07', '0:00:15', '0:00:19', '0:00:24', '0:00:31', '0:00:32', '0:00:35', '0:00:44', '0:00:53', '0:01:00', '0:01:08', '0:01:09', '0:01:13', '0:01:16', '0:01:26', '0:01:38', '0:01:39', '0:01:41', '0:02:10', '0:02:24', '0:03:04', '0:03:15', '0:03:28', '0:03:33', '0:03:47', '0:05:16', '0:05:19', '0:05:50', '0:06:22']
 
-  published_duration_text (TIME)
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '00:00:09', '00:00:30', '00:00:42', '00:01:10', '00:01:12', '00:01:32', '00:01:44', '00:01:47', '00:02:00', '00:02:02', '00:02:13', '00:02:20', '00:02:30', '00:02:54', '00:02:56', '00:03:01', '00:03:08', '00:03:55', '00:04:03', '00:04:06', '00:04:17', '00:04:32', '00:04:44', '00:05:31', '00:05:59', '00:07:17', '00:07:40', '00:08:49', '00:08:56']
 
-  uploaded_secs (INTEGER)
-    Range: 0 to 180551
+ uploaded_secs (INTEGER)
+  Range: 0 to 180551
 
-  created_secs (INTEGER)
-    Range: 0 to 361232
+ created_secs (INTEGER)
+  Range: 0 to 361232
 
-  published_secs (INTEGER)
-    Range: 0 to 4411
+ published_secs (INTEGER)
+  Range: 0 to 4411
 
-  uploaded_hours (DOUBLE)
-    Range: 0.0 to 50.15, avg: 3.57
+ uploaded_hours (DOUBLE)
+  Range: 0.0 to 50.15, avg: 3.57
 
-  created_hours (DOUBLE)
-    Range: 0.0 to 100.34, avg: 5.98
+ created_hours (DOUBLE)
+  Range: 0.0 to 100.34, avg: 5.98
 
-  published_hours (DOUBLE)
-    Range: 0.0 to 1.23, avg: 0.02
+ published_hours (DOUBLE)
+  Range: 0.0 to 1.23, avg: 0.02
 
 Table: dim_channel (18 rows)
 ---------------------------------------------
 
-  channel_id (BIGINT)
-    Range: 1 to 18
+ channel_id (BIGINT)
+  Range: 1 to 18
 
-  channel_name (VARCHAR)
-    Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R']
+ channel_name (VARCHAR)
+  Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R']
 
 Table: dim_user (45 rows)
 ---------------------------------------------
 
-  user_id (BIGINT)
-    Range: 1 to 45
+ user_id (BIGINT)
+  Range: 1 to 45
 
-  user_name (VARCHAR)
-    Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
+ user_name (VARCHAR)
+  Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
 
 Table: dim_input_type (12 rows)
 ---------------------------------------------
 
-  input_type_id (BIGINT)
-    Range: 1 to 12
+ input_type_id (BIGINT)
+  Range: 1 to 12
 
-  input_type (VARCHAR)
-    Exact values: ['Unknown', 'debate', 'discussion-show', 'drama', 'in-brief', 'interview', 'news bulletin', 'podcast', 'press conference', 'special reports', 'speech', 'sports show']
+ input_type (VARCHAR)
+  Exact values: ['Unknown', 'debate', 'discussion-show', 'drama', 'in-brief', 'interview', 'news bulletin', 'podcast', 'press conference', 'special reports', 'speech', 'sports show']
 
 Table: dim_output_type (5 rows)
 ---------------------------------------------
 
-  output_type_id (BIGINT)
-    Exact values: [1, 2, 3, 4, 5]
+ output_type_id (BIGINT)
+  Exact values: [1, 2, 3, 4, 5]
 
-  output_type (VARCHAR)
-    Exact values: ['Chapters', 'Full package', 'Key moments', 'My Key moments', 'Summary']
+ output_type (VARCHAR)
+  Exact values: ['Chapters', 'Full package', 'Key moments', 'My Key moments', 'Summary']
 
 Table: dim_language (6 rows)
 ---------------------------------------------
 
-  language_id (BIGINT)
-    Exact values: [1, 2, 3, 4, 5, 6]
+ language_id (BIGINT)
+  Exact values: [1, 2, 3, 4, 5, 6]
 
-  language_code (VARCHAR)
-    Exact values: ['ar', 'en', 'es', 'hi', 'mix', 'mr']
+ language_code (VARCHAR)
+  Exact values: ['ar', 'en', 'es', 'hi', 'mix', 'mr']
 
-  language_name (VARCHAR)
-    Exact values: ['Arabic', 'English', 'Hindi', 'Marathi', 'Mixed', 'Spanish']
+ language_name (VARCHAR)
+  Exact values: ['Arabic', 'English', 'Hindi', 'Marathi', 'Mixed', 'Spanish']
 
 Table: summary_user (45 rows)
 ---------------------------------------------
 
-  user_id (BIGINT)
-    Range: 1 to 45
+ user_id (BIGINT)
+  Range: 1 to 45
 
-  user_name (VARCHAR)
-    Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
+ user_name (VARCHAR)
+  Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
 
-  channels_count (BIGINT)
-    Range: 1 to 15
+ channels_count (BIGINT)
+  Range: 1 to 15
 
-  total_uploaded_count (HUGEINT)
+ total_uploaded_count (HUGEINT)
 
-  total_created_count (HUGEINT)
+ total_created_count (HUGEINT)
 
-  total_published_count (HUGEINT)
+ total_published_count (HUGEINT)
 
-  total_drop_off (HUGEINT)
+ total_drop_off (HUGEINT)
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 13.64, avg: 0.97
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 13.64, avg: 0.97
 
-  total_uploaded_secs (HUGEINT)
+ total_uploaded_secs (HUGEINT)
 
-  total_created_secs (HUGEINT)
+ total_created_secs (HUGEINT)
 
-  total_published_secs (HUGEINT)
+ total_published_secs (HUGEINT)
 
-  total_uploaded_hours (DOUBLE)
-    Range: 0.0 to 100.73, avg: 17.76
+ total_uploaded_hours (DOUBLE)
+  Range: 0.0 to 100.73, avg: 17.76
 
-  total_created_hours (DOUBLE)
-    Range: 0.02 to 209.31, avg: 29.79
+ total_created_hours (DOUBLE)
+  Range: 0.02 to 209.31, avg: 29.79
 
-  total_published_hours (DOUBLE)
-    Range: 0.0 to 1.23, avg: 0.1
+ total_published_hours (DOUBLE)
+  Range: 0.0 to 1.23, avg: 0.1
 
-  avg_hours_per_channel (DOUBLE)
-    Range: 0.0 to 13.96, avg: 3.31
+ avg_hours_per_channel (DOUBLE)
+  Range: 0.0 to 13.96, avg: 3.31
 
 Table: summary_channel (18 rows)
 ---------------------------------------------
 
-  channel_id (BIGINT)
-    Range: 1 to 18
+ channel_id (BIGINT)
+  Range: 1 to 18
 
-  channel_name (VARCHAR)
-    Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R']
+ channel_name (VARCHAR)
+  Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R']
 
-  uploaded_count (BIGINT)
-    Range: 3 to 1470
+ uploaded_count (BIGINT)
+  Range: 3 to 1470
 
-  created_count (BIGINT)
-    Range: 7 to 4725
+ created_count (BIGINT)
+  Range: 7 to 4725
 
-  published_count (BIGINT)
-    Exact values: [0, 1, 5, 14, 19, 71]
+ published_count (BIGINT)
+  Exact values: [0, 1, 5, 14, 19, 71]
 
-  drop_off_count (BIGINT)
-    Range: 7 to 4654
+ drop_off_count (BIGINT)
+  Range: 7 to 4654
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 1.5, avg: 0.2
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 1.5, avg: 0.2
 
-  creation_ratio (DOUBLE)
-    Range: 1.75 to 12.71, avg: 3.69
+ creation_ratio (DOUBLE)
+  Range: 1.75 to 12.71, avg: 3.69
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['0:11:14', '0:17:58', '0:22:05', '0:27:48', '0:35:20', '0:35:56', '10:17:01', '10:56:20', '158:25:12', '17:35:35', '17:42:41', '227:24:21', '23:31:11', '25:34:42', '297:15:05', '2:42:05', '5:39:49', '8:05:43']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['0:11:14', '0:17:58', '0:22:05', '0:27:48', '0:35:20', '0:35:56', '10:17:01', '10:56:20', '158:25:12', '17:35:35', '17:42:41', '227:24:21', '23:31:11', '25:34:42', '297:15:05', '2:42:05', '5:39:49', '8:05:43']
 
-  created_duration_text (VARCHAR)
-    Exact values: ['0:16:33', '0:39:48', '0:41:05', '0:50:05', '0:55:32', '0:57:33', '11:11:49', '13:59:58', '20:33:19', '22:41:30', '235:03:49', '25:23:17', '33:33:50', '410:36:38', '42:08:02', '472:02:39', '4:30:33', '59:03:55']
+ created_duration_text (VARCHAR)
+  Exact values: ['0:16:33', '0:39:48', '0:41:05', '0:50:05', '0:55:32', '0:57:33', '11:11:49', '13:59:58', '20:33:19', '22:41:30', '235:03:49', '25:23:17', '33:33:50', '410:36:38', '42:08:02', '472:02:39', '4:30:33', '59:03:55']
 
-  published_duration_text (TIME)
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '00:03:01', '00:08:56', '00:16:07', '00:24:19', '00:27:44', '03:02:30']
 
-  uploaded_secs (INTEGER)
-    Range: 674 to 1070105
+ uploaded_secs (INTEGER)
+  Range: 674 to 1070105
 
-  created_secs (INTEGER)
-    Range: 993 to 1699359
+ created_secs (INTEGER)
+  Range: 993 to 1699359
 
-  published_secs (INTEGER)
-    Exact values: [0, 181, 536, 967, 1459, 1664, 10950]
+ published_secs (INTEGER)
+  Exact values: [0, 181, 536, 967, 1459, 1664, 10950]
 
-  uploaded_hours (DOUBLE)
-    Range: 0.19 to 297.25, avg: 44.87
+ uploaded_hours (DOUBLE)
+  Range: 0.19 to 297.25, avg: 44.87
 
-  created_hours (DOUBLE)
-    Range: 0.28 to 472.04, avg: 75.29
+ created_hours (DOUBLE)
+  Range: 0.28 to 472.04, avg: 75.29
 
-  published_hours (DOUBLE)
-    Range: 0.0 to 3.04, avg: 0.24
+ published_hours (DOUBLE)
+  Range: 0.0 to 3.04, avg: 0.24
 
 Table: summary_monthly (12 rows)
 ---------------------------------------------
 
-  month (VARCHAR)
-    Exact values: ['Apr, 2025', 'Aug, 2025', 'Dec, 2025', 'Feb, 2026', 'Jan, 2026', 'Jul, 2025', 'Jun, 2025', 'Mar, 2025', 'May, 2025', 'Nov, 2025', 'Oct, 2025', 'Sep, 2025']
+ month (VARCHAR)
+  Exact values: ['Apr, 2025', 'Aug, 2025', 'Dec, 2025', 'Feb, 2026', 'Jan, 2026', 'Jul, 2025', 'Jun, 2025', 'Mar, 2025', 'May, 2025', 'Nov, 2025', 'Oct, 2025', 'Sep, 2025']
 
-  uploaded_count (BIGINT)
-    Range: 194 to 676
+ month_order (INTEGER)
+  Range: 1 to 12
 
-  created_count (BIGINT)
-    Range: 642 to 2756
+ uploaded_count (BIGINT)
+  Range: 194 to 676
 
-  published_count (BIGINT)
-    Exact values: [0, 2, 3, 4, 7, 10, 14, 20, 44]
+ created_count (BIGINT)
+  Range: 642 to 2756
 
-  drop_off_count (BIGINT)
-    Range: 637 to 2742
+ published_count (BIGINT)
+  Exact values: [0, 2, 3, 4, 7, 10, 14, 20, 44]
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 2.66, avg: 0.73
+ drop_off_count (BIGINT)
+  Range: 637 to 2742
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['121:59:42', '122:03:35', '161:52:11', '33:36:59', '34:21:14', '38:15:27', '39:56:34', '46:56:53', '47:10:45', '47:51:24', '48:06:54', '65:28:28']
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 2.66, avg: 0.73
 
-  created_duration_text (VARCHAR)
-    Exact values: ['176:16:55', '191:27:32', '301:30:46', '58:38:05', '64:26:46', '64:31:04', '66:50:11', '71:41:50', '83:22:47', '84:09:19', '94:17:09', '98:01:05']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['121:59:42', '122:03:35', '161:52:11', '33:36:59', '34:21:14', '38:15:27', '39:56:34', '46:56:53', '47:10:45', '47:51:24', '48:06:54', '65:28:28']
 
-  published_duration_text (TIME)
+ created_duration_text (VARCHAR)
+  Exact values: ['176:16:55', '191:27:32', '301:30:46', '58:38:05', '64:26:46', '64:31:04', '66:50:11', '71:41:50', '83:22:47', '84:09:19', '94:17:09', '98:01:05']
 
-  uploaded_secs (INTEGER)
-    Range: 121019 to 582731
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '00:02:13', '00:03:52', '00:06:33', '00:11:48', '00:14:38', '00:14:55', '00:56:12', '01:05:42', '01:26:44']
 
-  created_secs (INTEGER)
-    Range: 211085 to 1085446
+ uploaded_secs (INTEGER)
+  Range: 121019 to 582731
 
-  published_secs (INTEGER)
-    Exact values: [0, 133, 232, 393, 708, 878, 895, 3372, 3942, 5204]
+ created_secs (INTEGER)
+  Range: 211085 to 1085446
 
-  uploaded_hours (DOUBLE)
-    Range: 33.62 to 161.87, avg: 67.31
+ published_secs (INTEGER)
+  Exact values: [0, 133, 232, 393, 708, 878, 895, 3372, 3942, 5204]
 
-  created_hours (DOUBLE)
-    Range: 58.63 to 301.51, avg: 112.94
+ uploaded_hours (DOUBLE)
+  Range: 33.62 to 161.87, avg: 67.31
 
-  published_hours (DOUBLE)
-    Range: 0.0 to 1.45, avg: 0.37
+ created_hours (DOUBLE)
+  Range: 58.63 to 301.51, avg: 112.94
+
+ published_hours (DOUBLE)
+  Range: 0.0 to 1.45, avg: 0.37
 
 Table: summary_input_type (12 rows)
 ---------------------------------------------
 
-  input_type (VARCHAR)
-    Exact values: ['Unknown', 'debate', 'discussion-show', 'drama', 'in-brief', 'interview', 'news bulletin', 'podcast', 'press conference', 'special reports', 'speech', 'sports show']
+ input_type (VARCHAR)
+  Exact values: ['Unknown', 'debate', 'discussion-show', 'drama', 'in-brief', 'interview', 'news bulletin', 'podcast', 'press conference', 'special reports', 'speech', 'sports show']
 
-  uploaded_count (BIGINT)
-    Range: 1 to 1299
+ uploaded_count (BIGINT)
+  Range: 1 to 1299
 
-  created_count (BIGINT)
-    Range: 3 to 4972
+ created_count (BIGINT)
+  Range: 3 to 4972
 
-  published_count (BIGINT)
-    Exact values: [0, 2, 3, 5, 12, 15, 35, 39]
+ published_count (BIGINT)
+  Exact values: [0, 2, 3, 5, 12, 15, 35, 39]
 
-  drop_off_count (BIGINT)
-    Range: 3 to 4937
+ drop_off_count (BIGINT)
+  Range: 3 to 4937
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 3.8, avg: 0.63
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 3.8, avg: 0.63
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['00:04:25', '00:27:48', '01:17:02', '02:10:17', '02:54:17', '04:36:46', '132:41:32', '133:00:44', '171:45:39', '243:53:35', '51:06:27', '63:41:34']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['00:04:25', '00:27:48', '01:17:02', '02:10:17', '02:54:17', '04:36:46', '132:41:32', '133:00:44', '171:45:39', '243:53:35', '51:06:27', '63:41:34']
 
-  created_duration_text (VARCHAR)
-    Exact values: ['00:05:26', '00:41:05', '01:17:02', '02:10:17', '02:55:10', '10:03:23', '197:50:49', '217:47:28', '275:52:16', '462:43:19', '85:26:19', '98:17:21']
+ created_duration_text (VARCHAR)
+  Exact values: ['00:05:26', '00:41:05', '01:17:02', '02:10:17', '02:55:10', '10:03:23', '197:50:49', '217:47:28', '275:52:16', '462:43:19', '85:26:19', '98:17:21']
 
-  published_duration_text (TIME)
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '00:02:47', '00:16:15', '00:18:53', '00:19:01', '00:19:20', '01:26:48', '01:39:33']
 
-  uploaded_secs (INTEGER)
-    Range: 265 to 878015
+ uploaded_secs (INTEGER)
+  Range: 265 to 878015
 
-  created_secs (INTEGER)
-    Range: 326 to 1665799
+ created_secs (INTEGER)
+  Range: 326 to 1665799
 
-  published_secs (INTEGER)
-    Exact values: [0, 167, 975, 1133, 1141, 1160, 5208, 5973]
+ published_secs (INTEGER)
+  Exact values: [0, 167, 975, 1133, 1141, 1160, 5208, 5973]
 
-  uploaded_hours (DOUBLE)
-    Range: 0.07 to 243.89, avg: 67.3
+ uploaded_hours (DOUBLE)
+  Range: 0.07 to 243.89, avg: 67.3
 
-  created_hours (DOUBLE)
-    Range: 0.09 to 462.72, avg: 112.93
+ created_hours (DOUBLE)
+  Range: 0.09 to 462.72, avg: 112.93
 
-  published_hours (DOUBLE)
-    Range: 0.0 to 1.66, avg: 0.36
+ published_hours (DOUBLE)
+  Range: 0.0 to 1.66, avg: 0.36
 
 Table: summary_output_type (5 rows)
 ---------------------------------------------
 
-  output_type (VARCHAR)
-    Exact values: ['Chapters', 'Full package', 'Key moments', 'My Key moments', 'Summary']
+ output_type (VARCHAR)
+  Exact values: ['Chapters', 'Full package', 'Key moments', 'My Key moments', 'Summary']
 
-  uploaded_count (BIGINT)
-    Exact values: [0, 4453]
+ uploaded_count (BIGINT)
+  Exact values: [0, 4453]
 
-  created_count (BIGINT)
-    Exact values: [840, 1237, 2007, 4453, 6377]
+ created_count (BIGINT)
+  Exact values: [840, 1237, 2007, 4453, 6377]
 
-  published_count (BIGINT)
-    Exact values: [1, 2, 32, 35, 41]
+ published_count (BIGINT)
+  Exact values: [1, 2, 32, 35, 41]
 
-  drop_off_count (BIGINT)
-    Exact values: [839, 1205, 2005, 4418, 6336]
+ drop_off_count (BIGINT)
+  Exact values: [839, 1205, 2005, 4418, 6336]
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.1 to 2.59, avg: 0.85
+ publish_rate_pct (DOUBLE)
+  Range: 0.1 to 2.59, avg: 0.85
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['00:00:00', '807:40:06']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '807:40:06']
 
-  created_duration_text (VARCHAR)
-    Exact values: ['153:48:44', '256:30:37', '46:34:08', '807:40:06', '90:36:20']
+ created_duration_text (VARCHAR)
+  Exact values: ['153:48:44', '256:30:37', '46:34:08', '807:40:06', '90:36:20']
 
-  published_duration_text (TIME)
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:53', '00:06:51', '00:43:21', '01:12:33', '02:18:59']
 
-  uploaded_secs (INTEGER)
-    Exact values: [0, 2907606]
+ uploaded_secs (INTEGER)
+  Exact values: [0, 2907606]
 
-  created_secs (INTEGER)
-    Exact values: [167648, 326180, 553724, 923437, 2907606]
+ created_secs (INTEGER)
+  Exact values: [167648, 326180, 553724, 923437, 2907606]
 
-  published_secs (INTEGER)
-    Exact values: [53, 411, 2601, 4353, 8339]
+ published_secs (INTEGER)
+  Exact values: [53, 411, 2601, 4353, 8339]
 
-  uploaded_hours (DOUBLE)
-    Range: 0.0 to 807.67, avg: 161.53
+ uploaded_hours (DOUBLE)
+  Range: 0.0 to 807.67, avg: 161.53
 
-  created_hours (DOUBLE)
-    Range: 46.57 to 807.67, avg: 271.03
+ created_hours (DOUBLE)
+  Range: 46.57 to 807.67, avg: 271.03
 
-  published_hours (DOUBLE)
-    Range: 0.01 to 2.32, avg: 0.87
+ published_hours (DOUBLE)
+  Range: 0.01 to 2.32, avg: 0.87
 
 Table: summary_language (6 rows)
 ---------------------------------------------
 
-  language_code (VARCHAR)
-    Exact values: ['ar', 'en', 'es', 'hi', 'mix', 'mr']
+ language_code (VARCHAR)
+  Exact values: ['ar', 'en', 'es', 'hi', 'mix', 'mr']
 
-  language_name (VARCHAR)
-    Exact values: ['Arabic', 'English', 'Hindi', 'Marathi', 'Mixed', 'Spanish']
+ language_name (VARCHAR)
+  Exact values: ['Arabic', 'English', 'Hindi', 'Marathi', 'Mixed', 'Spanish']
 
-  uploaded_count (BIGINT)
-    Exact values: [1, 11, 1792, 2647]
+ uploaded_count (BIGINT)
+  Exact values: [1, 11, 1792, 2647]
 
-  created_count (BIGINT)
-    Exact values: [1, 29, 6021, 8861]
+ created_count (BIGINT)
+  Exact values: [1, 29, 6021, 8861]
 
-  published_count (BIGINT)
-    Exact values: [0, 20, 91]
+ published_count (BIGINT)
+  Exact values: [0, 20, 91]
 
-  drop_off_count (BIGINT)
-    Exact values: [1, 29, 6001, 8770]
+ drop_off_count (BIGINT)
+  Exact values: [1, 29, 6001, 8770]
 
-  publish_rate_pct (DOUBLE)
-    Range: 0.0 to 1.03, avg: 0.23
+ publish_rate_pct (DOUBLE)
+  Range: 0.0 to 1.03, avg: 0.23
 
-  uploaded_duration_text (VARCHAR)
-    Exact values: ['00:00:30', '00:04:28', '01:00:56', '02:30:48', '366:33:38', '437:29:46']
+ uploaded_duration_text (VARCHAR)
+  Exact values: ['00:00:30', '00:04:28', '01:00:56', '02:30:48', '366:33:38', '437:29:46']
 
-  created_duration_text (VARCHAR)
-    Exact values: ['00:00:30', '00:04:28', '01:00:56', '03:17:46', '598:44:37', '752:01:38']
+ created_duration_text (VARCHAR)
+  Exact values: ['00:00:30', '00:04:28', '01:00:56', '03:17:46', '598:44:37', '752:01:38']
 
-  published_duration_text (TIME)
+ published_duration_text (VARCHAR)
+  Exact values: ['00:00:00', '00:27:20', '03:55:17']
 
-  uploaded_secs (INTEGER)
-    Exact values: [30, 268, 3656, 9048, 1319618, 1574986]
+ uploaded_secs (INTEGER)
+  Exact values: [30, 268, 3656, 9048, 1319618, 1574986]
 
-  created_secs (INTEGER)
-    Exact values: [30, 268, 3656, 11866, 2155477, 2707298]
+ created_secs (INTEGER)
+  Exact values: [30, 268, 3656, 11866, 2155477, 2707298]
 
-  published_secs (INTEGER)
-    Exact values: [0, 1640, 14117]
+ published_secs (INTEGER)
+  Exact values: [0, 1640, 14117]
 
-  uploaded_hours (DOUBLE)
-    Range: 0.01 to 437.5, avg: 134.61
+ uploaded_hours (DOUBLE)
+  Range: 0.01 to 437.5, avg: 134.61
 
-  created_hours (DOUBLE)
-    Range: 0.01 to 752.03, avg: 225.86
+ created_hours (DOUBLE)
+  Range: 0.01 to 752.03, avg: 225.86
 
-  published_hours (DOUBLE)
-    Range: 0.0 to 3.92, avg: 0.73
+ published_hours (DOUBLE)
+  Range: 0.0 to 3.92, avg: 0.73
+
+--- STANDALONE TABLES ---
+(Use ONLY when question is specifically about
+ platforms, data quality, or video-level detail.
+ Never use these for general channel/user questions.)
+
+Table: summary_platform (144 rows)
+---------------------------------------------
+
+ channel_name (VARCHAR)
+  Exact values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R']
+
+ platform_name (VARCHAR)
+  Exact values: ['Facebook', 'Instagram', 'Linkedin', 'Reels', 'Shorts', 'Threads', 'X', 'Youtube']
+
+ publish_count (BIGINT)
+  Range: 0 to 29
+
+Table: fact_video_jobs (14918 rows)
+---------------------------------------------
+
+ video_id (BIGINT)
+  Range: 104798 to 999904363
+
+ user_id (BIGINT)
+  Range: 1 to 45
+
+ is_published (INTEGER)
+  Exact values: [0, 1]
+
+ team_name (VARCHAR)
+  Exact values: ['Team_a3be678541', 'Unknown']
+
+ input_type (VARCHAR)
+  Exact values: ['Unknown', 'debate', 'discussion-show', 'drama', 'in-brief', 'interview', 'news bulletin', 'podcast', 'press conference', 'special reports', 'speech', 'sports show']
+
+ headline (VARCHAR)
+  Exact values: ['Headline_00073e8f98bf', 'Headline_0011385f8cec', 'Headline_00211cb44e23', 'Headline_002125e16252', 'Headline_002568f00ec7', 'Headline_00271de1b759', 'Headline_0027c192c7ae', 'Headline_002d17784d01', 'Headline_002d389a324a', 'Headline_002d3d06bb41', 'Headline_00335a27840a', 'Headline_00358b7fe91f', 'Headline_003781f0e869', 'Headline_0039d87fe124', 'Headline_003afb1404a3', 'Headline_00458f14a06a', 'Headline_0045cea30cdd', 'Headline_00485ff7f3a3', 'Headline_00559a6ec2a7', 'Headline_0058fe4edf56', 'Headline_005c99d98c65', 'Headline_005c9b01516d', 'Headline_0060c1821b5f', 'Headline_0069d8152f1c', 'Headline_006cd41c9da4', 'Headline_0072022542a7', 'Headline_0073b3b4893b', 'Headline_0080e4a54309', 'Headline_008a30e8be8f', 'Headline_008b0b34676c']
+  Nulls: 1274
+
+ source_url (VARCHAR)
+  Exact values: ['https://obfuscated.source.example/0010b84582d4fd8c', 'https://obfuscated.source.example/0011c3392cfa34d9', 'https://obfuscated.source.example/0019fe6f951619f3', 'https://obfuscated.source.example/0027021ae5b4e428', 'https://obfuscated.source.example/00279e977ece0de2', 'https://obfuscated.source.example/002ad7633e0562b8', 'https://obfuscated.source.example/0032719a741e27fa', 'https://obfuscated.source.example/0039a42432a2a22c', 'https://obfuscated.source.example/004687cf55f1cd8d', 'https://obfuscated.source.example/00499085e807307e', 'https://obfuscated.source.example/004bfec5b66129f6', 'https://obfuscated.source.example/004dddd8a9f1124a', 'https://obfuscated.source.example/004e3c9a71209411', 'https://obfuscated.source.example/0051a56d1674ff6e', 'https://obfuscated.source.example/0055c8ef33211013', 'https://obfuscated.source.example/00586237c2fcf154', 'https://obfuscated.source.example/005e8e4604fb9135', 'https://obfuscated.source.example/005f5bee7510d504', 'https://obfuscated.source.example/0069ce5de293d934', 'https://obfuscated.source.example/006a49fc6d48ae8d', 'https://obfuscated.source.example/00727d969beee4f8', 'https://obfuscated.source.example/0085ede3d1037e4d', 'https://obfuscated.source.example/008d9cb482f2d52c', 'https://obfuscated.source.example/008fa639b6b6eae0', 'https://obfuscated.source.example/0091509b2c5347b2', 'https://obfuscated.source.example/009216f8b851a23e', 'https://obfuscated.source.example/009931224d56dd87', 'https://obfuscated.source.example/009dcb83243129c2', 'https://obfuscated.source.example/00a505f99bf52b85', 'https://obfuscated.source.example/00a9e50d441094df']
+
+ published_platform (VARCHAR)
+  Exact values: ['Facebook', 'Facebook-Reels', 'Shorts', 'YouTube']
+  Nulls: 14886
+
+ published_url (VARCHAR)
+  Exact values: ['https://obfuscated.published.example/0067f2be7445be48', 'https://obfuscated.published.example/0c80727dcc26d73d', 'https://obfuscated.published.example/0e212a9addae34b9', 'https://obfuscated.published.example/12c491f50deec57a', 'https://obfuscated.published.example/1bfbd0c162d745a6', 'https://obfuscated.published.example/2c45b98cc25a02cf', 'https://obfuscated.published.example/329019d45071110c', 'https://obfuscated.published.example/3aa5f0d3d1d7f5fb', 'https://obfuscated.published.example/42c3b2d96a17dfff', 'https://obfuscated.published.example/44d44b6ceb9beceb', 'https://obfuscated.published.example/46de302d028ac68d', 'https://obfuscated.published.example/5bf28c76d41fe0ac', 'https://obfuscated.published.example/610c87aa1992f7f6', 'https://obfuscated.published.example/62da2a721b227b4c', 'https://obfuscated.published.example/6510c29a092676ba', 'https://obfuscated.published.example/659dfa1178b09815', 'https://obfuscated.published.example/6e3bf97dcf11cf68', 'https://obfuscated.published.example/6e7a3dacf930934c', 'https://obfuscated.published.example/759f8d0d43cb8019', 'https://obfuscated.published.example/782a642531108737', 'https://obfuscated.published.example/86c74787bd448eba', 'https://obfuscated.published.example/8f504ef32c3802dc', 'https://obfuscated.published.example/99cf604e1916405c', 'https://obfuscated.published.example/99ead07173d1cf06', 'https://obfuscated.published.example/a31a0eb1b7724729', 'https://obfuscated.published.example/b4355a6803edea2b', 'https://obfuscated.published.example/bd25539526a62f11', 'https://obfuscated.published.example/bfd2ddaa69993f9e', 'https://obfuscated.published.example/c7156715879b3278', 'https://obfuscated.published.example/ced5e4b15b793655']
+  Nulls: 14886
+
+ uploaded_by (VARCHAR)
+  Exact values: ['AB', 'Abhishek', 'Abhishek Sri', 'Adarsh (Frammer)', 'Alok Rai', 'Anamika Singh', 'Arijit Chatterjee', 'Arun J', 'Ashween', 'Auto Upload', 'Chandan', 'Deepika Uniyal (QA testaing.com)', 'Dheeraj Pareek(QA theveritycorp.com)', 'Dheerendra Kumar', 'Divyanshu Dutta Roy', 'Harish', 'Kallol Pratim', 'Kawaljit Singh Bedi', 'Neha', 'Nitesh', 'Prithviraj', 'QA-Amit', 'QA-Aniket', 'QA-Ankith ', 'QA-Bhargavi', 'QA-Purushottam', 'Rakesh (devops@frammer.com)', 'Ravi Pratap Rai', 'Richa', 'Ritwik']
+
+Table: data_quality (1 rows)
+---------------------------------------------
+
+ total_videos (BIGINT)
+  Exact values: [14918]
+
+ unknown_team_count (HUGEINT)
+
+ unknown_team_pct (DOUBLE)
+  Range: 99.29 to 99.29, avg: 99.29
+
+ total_published (HUGEINT)
+
+ published_with_url (HUGEINT)
+
+ url_completeness_pct (DOUBLE)
+  Range: 32.0 to 32.0, avg: 32.0
+
+ duplicate_video_ids (BIGINT)
+  Exact values: [5]
 
 ================================================
 HOW TABLES CONNECT
 ================================================
 
-bridge_user_channel.user_id    → dim_user.user_id
-bridge_user_channel.channel_id → dim_channel.channel_id
-summary_channel.channel_id     → dim_channel.channel_id
+bridge_user_channel.user_id
+    → dim_user.user_id
 
-summary_user    is aggregated FROM bridge_user_channel
-                (totals per user across all channels)
+bridge_user_channel.channel_id
+    → dim_channel.channel_id
 
-summary_channel is aggregated FROM raw_channel_summary
-                (totals per channel across all users)
+summary_channel.channel_id
+    → dim_channel.channel_id
+
+summary_user is aggregated FROM
+    bridge_user_channel
+    (totals per user across all channels)
+
+summary_channel is aggregated FROM
+    raw_channel_summary
+    (totals per channel across all users)
+
+summary_platform is aggregated FROM
+    raw_channel_platform (unpivoted)
+    Links to dim_channel via channel_name
+
+data_quality is aggregated FROM
+    fact_video_jobs (single summary row)
 
 ================================================
 TABLE SELECTION RULES — VERY IMPORTANT
@@ -434,60 +771,111 @@ TABLE SELECTION RULES — VERY IMPORTANT
 
 Use summary_user when:
 → Question about user TOTAL across all channels
-→ "who uploaded most"    → summary_user
-→ "top users by hours"   → summary_user
-→ "user publish rate"    → summary_user
+→ "who uploaded most" → summary_user
+→ "top users by hours" → summary_user
+→ "user publish rate overall" → summary_user
+→ User Upload Volume Rank KPI
+→ User Publish Rate KPI (overall)
 
 Use bridge_user_channel when:
 → Question needs BOTH user AND channel
-→ "Neha in channel A"               → bridge_user_channel
-→ "top users IN channel B"          → bridge_user_channel
-→ "which channel does X work most in" → bridge_user_channel
+→ "Neha in channel A" → bridge_user_channel
+→ "top users IN channel B" → bridge_user_channel
+→ "which channel does X work most in"
+→ Channel × User Metric KPI
 
 Use summary_channel when:
 → Question about channel TOTAL across all users
 → "which channel most active" → summary_channel
-→ "channel drop-off"          → summary_channel
-→ "channel publish rate"      → summary_channel
+→ "channel drop-off" → summary_channel
+→ Drop-off Volume KPI
+→ Zero-Publish Channel Count KPI
+→ Publish Rate by Channel KPI
+→ Overall Publish Rate KPI (sum all rows)
+→ Content Amplification Ratio KPI (sum all rows)
+→ Total Content Hours KPI (sum all rows)
 
 Use summary_monthly when:
 → Any question about time or month
-→ "monthly trend"                  → summary_monthly
-→ "which month had most uploads"   → summary_monthly
+→ "monthly trend" → summary_monthly
+→ Month-over-Month Upload Growth Rate KPI
+→ Monthly Publish Rate Trend KPI
 
 Use summary_input_type when:
 → Question about content type
-→ "interview vs speech"            → summary_input_type
-→ "which input type most uploaded" → summary_input_type
+→ Input Type Publish Rate KPI
+→ Input Type Amplification Ratio KPI
 
 Use summary_output_type when:
 → Question about output format
-→ "reels vs chapters"                  → summary_output_type
-→ "which output type published most"   → summary_output_type
+→ Output Format Publish Rate KPI
+→ Output Format Mix Distribution KPI
 
 Use summary_language when:
 → Question about language
-→ "hindi vs english"         → summary_language
-→ "which language most active" → summary_language
+→ Language Publish Rate KPI
+→ Language Upload Share KPI
 
-NEVER join summary_monthly with summary_channel or summary_user.
+Use summary_platform ONLY when:
+→ Question explicitly mentions a social platform
+  (YouTube, Reels, Shorts, Instagram, Facebook,
+   LinkedIn, X, Threads)
+→ Platform Distribution KPI
+→ "where is content being published"
+→ NEVER use for general channel questions
+
+Use fact_video_jobs ONLY when:
+→ QA / Test Account Activity KPI
+→ Need row-level video data not in summaries
+→ NEVER use for upload/publish volume questions
+  (use summary tables instead — they are faster
+   and already aggregated)
+
+Use data_quality ONLY when:
+→ Unknown Team Name Rate KPI
+→ Published URL Completeness Rate KPI
+→ Duplicate Video ID Count KPI
+→ Any data integrity question
+→ Single-row table — always SELECT *
+
+NEVER join summary_monthly with
+summary_channel or summary_user.
 Monthly data has NO channel or user breakdown.
+
+NEVER join summary_platform with summary tables.
+Platform data has no time or user breakdown.
 
 ================================================
 METRIC FORMULAS
 ================================================
 
 Publish rate:
-→ ROUND(published_count * 100.0 / NULLIF(created_count, 0), 2)
+→ ROUND(published_count * 100.0
+        / NULLIF(created_count, 0), 2)
 
 Drop-off:
 → created_count - published_count
 
+Content Amplification Ratio:
+→ ROUND(created_count * 1.0
+        / NULLIF(uploaded_count, 0), 2)
+
+Month-over-Month growth:
+→ ALWAYS use month_order (INTEGER) not month (TEXT)
+  month is text — sorts alphabetically — WRONG
+  month_order is 1-12 — sorts chronologically — RIGHT
+→ ROUND((uploaded_count
+         - LAG(uploaded_count) OVER (ORDER BY month_order))
+        * 100.0
+        / NULLIF(LAG(uploaded_count)
+                 OVER (ORDER BY month_order), 0), 2)
+
 Duration in hours from seconds:
 → ROUND(SUM(uploaded_secs) / 3600.0, 2)
 
-Total uploaded hours across all channels:
-→ SUM(uploaded_hours) FROM summary_channel
+Platform share:
+→ ROUND(publish_count * 100.0
+        / NULLIF(SUM(publish_count) OVER (), 0), 2)
 
 ================================================
 CRITICAL RULES — NEVER BREAK THESE
@@ -495,8 +883,9 @@ CRITICAL RULES — NEVER BREAK THESE
 
 RULE 1: channel_name exact values
     Single capital letters ONLY:
-    'A','B','C','D','E','F','G','H','I','J',
-    'K','L','M','N','O','P','Q','R'
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+    'Q', 'R'
     NEVER: 'channel_a', 'Channel A', 'ch_a'
 
 RULE 2: input_type exact values
@@ -523,91 +912,198 @@ RULE 6: month exact format
     'Jun, 2025', 'Mar, 2025', 'May, 2025',
     'Nov, 2025', 'Oct, 2025', 'Sep, 2025'
 
-RULE 7:  Always use NULLIF for division
-RULE 8:  Always alias columns (COUNT(*) AS total_count)
-RULE 9:  Always ORDER BY main metric DESC
-RULE 10: Always LIMIT 10 unless user specifies
-RULE 11: Duration columns are TEXT — use _secs or _hours for math
-RULE 12: No date filtering on fact tables; only summary_monthly has month
+RULE 6b: month ordering — CRITICAL
+    month column is TEXT — alphabetical sort is WRONG
+    ALWAYS use month_order column for ORDER BY
+    month_order values: Mar2025=1, Apr2025=2,
+    May2025=3, Jun2025=4, Jul2025=5, Aug2025=6,
+    Sep2025=7, Oct2025=8, Nov2025=9, Dec2025=10,
+    Jan2026=11, Feb2026=12
+    USE: ORDER BY month_order
+    NEVER: ORDER BY month
+
+RULE 7: platform_name exact values
+    'Facebook', 'Instagram', 'Linkedin',
+    'Reels', 'Shorts', 'X', 'Youtube', 'Threads'
+
+RULE 8: Always use NULLIF for division
+    ROUND(value * 100.0 / NULLIF(total, 0), 2)
+
+RULE 9: Always alias columns
+    COUNT(*) AS total_count
+
+RULE 10: Always ORDER BY main metric DESC
+    Unless user asks for ascending
+
+RULE 11: Always LIMIT 10
+    Unless user asks for more or less
+
+RULE 12: Duration columns are TEXT
+    uploaded_duration_text is "hh:mm:ss"
+    Cannot do math on text columns
+    Use uploaded_secs or uploaded_hours instead
+
+RULE 13: No date filtering on fact tables
+    Only summary_monthly has month column
+    Cannot filter by specific date elsewhere
+
+RULE 14: data_quality is a single-row table
+    Always SELECT * FROM data_quality
+    Never GROUP BY or aggregate on it
+
+RULE 15: summary_platform channel_name
+    has TRIM applied — values match dim_channel
+    exactly ('A', 'B' etc.)
 
 ================================================
 EXAMPLE QUERIES
 ================================================
 
-Example 1: Top channels by uploaded hours
-    SELECT channel_name, uploaded_count,
-           uploaded_hours, publish_rate_pct
-    FROM summary_channel
-    ORDER BY uploaded_hours DESC
-    LIMIT 10;
+Example 1: Overall Publish Rate KPI
+    SELECT
+        SUM(uploaded_count)  AS total_uploaded,
+        SUM(created_count)   AS total_created,
+        SUM(published_count) AS total_published,
+        ROUND(SUM(published_count) * 100.0
+              / NULLIF(SUM(created_count), 0), 2)
+              AS overall_publish_rate_pct
+    FROM summary_channel;
 
-Example 2: Top users by uploaded hours
-    SELECT user_name, channels_count,
-           total_uploaded_count,
-           total_uploaded_hours,
-           publish_rate_pct
-    FROM summary_user
-    ORDER BY total_uploaded_hours DESC
-    LIMIT 10;
+Example 2: Content Amplification Ratio KPI
+    SELECT
+        SUM(uploaded_count) AS total_uploaded,
+        SUM(created_count)  AS total_created,
+        ROUND(SUM(created_count) * 1.0
+              / NULLIF(SUM(uploaded_count), 0), 2)
+              AS content_amplification_ratio
+    FROM summary_channel;
 
-Example 3: Channel drop-off analysis
+Example 3: Drop-off Volume KPI
     SELECT channel_name, created_count,
            published_count, drop_off_count,
            publish_rate_pct
     FROM summary_channel
     ORDER BY drop_off_count DESC;
 
-Example 4: Monthly trend
-    SELECT month, uploaded_count,
-           created_count, published_count,
-           uploaded_hours, publish_rate_pct
+Example 4: Month-over-Month Upload Growth Rate KPI
+    SELECT month, month_order, uploaded_count,
+        ROUND(
+            (uploaded_count
+             - LAG(uploaded_count)
+               OVER (ORDER BY month_order))
+            * 100.0
+            / NULLIF(LAG(uploaded_count)
+                     OVER (ORDER BY month_order), 0)
+        , 2) AS mom_growth_pct
     FROM summary_monthly
-    ORDER BY month;
+    ORDER BY month_order;
 
-Example 5: Input type breakdown
-    SELECT input_type, uploaded_count,
-           uploaded_hours, publish_rate_pct,
-           drop_off_count
-    FROM summary_input_type
-    ORDER BY uploaded_hours DESC;
-
-Example 6: Neha across all channels
-    SELECT channel_name, uploaded_count,
-           uploaded_hours, published_count,
+Example 5: Monthly Publish Rate Trend KPI
+    SELECT month, month_order, uploaded_count,
+           created_count, published_count,
            publish_rate_pct
-    FROM bridge_user_channel
-    WHERE user_name = 'Neha'
-    ORDER BY uploaded_hours DESC;
+    FROM summary_monthly
+    ORDER BY month_order;
 
-Example 7: Top users in channel A
-    SELECT user_name, uploaded_count,
-           uploaded_hours, published_count
-    FROM bridge_user_channel
-    WHERE channel_name = 'A'
-    ORDER BY uploaded_hours DESC
-    LIMIT 10;
+Example 6: Zero-Publish Channel Count KPI
+    SELECT COUNT(*) AS zero_publish_channels
+    FROM summary_channel
+    WHERE published_count = 0;
 
-Example 8: Language breakdown
+Example 7: Input Type Amplification Ratio KPI
+    SELECT input_type,
+           uploaded_count, created_count,
+           ROUND(created_count * 1.0
+                 / NULLIF(uploaded_count, 0), 2)
+                 AS amplification_ratio
+    FROM summary_input_type
+    ORDER BY amplification_ratio DESC;
+
+Example 8: Output Format Mix Distribution KPI
+    SELECT output_type, created_count,
+        ROUND(created_count * 100.0
+              / NULLIF(SUM(created_count) OVER (), 0)
+        , 2) AS share_pct
+    FROM summary_output_type
+    ORDER BY created_count DESC;
+
+Example 9: Language Upload Share KPI
     SELECT language_name, uploaded_count,
-           uploaded_hours, publish_rate_pct
+        ROUND(uploaded_count * 100.0
+              / NULLIF(SUM(uploaded_count) OVER (), 0)
+        , 2) AS upload_share_pct,
+        publish_rate_pct
     FROM summary_language
     ORDER BY uploaded_count DESC;
 
-Example 9: Overall KPIs
-    SELECT
-        SUM(uploaded_count)   AS total_uploaded,
-        SUM(created_count)    AS total_created,
-        SUM(published_count)  AS total_published,
-        SUM(drop_off_count)   AS total_drop_off,
-        ROUND(SUM(published_count) * 100.0
-              / NULLIF(SUM(created_count), 0), 2) AS overall_publish_rate,
-        ROUND(SUM(uploaded_secs) / 3600.0, 2)    AS total_uploaded_hours
-    FROM summary_channel;
+Example 10: Platform Distribution KPI
+    SELECT platform_name,
+           SUM(publish_count) AS total_published,
+           ROUND(SUM(publish_count) * 100.0
+                 / NULLIF(SUM(SUM(publish_count))
+                           OVER (), 0)
+           , 2) AS platform_share_pct
+    FROM summary_platform
+    GROUP BY platform_name
+    ORDER BY total_published DESC;
 
-Example 10: Which user works in most channels
-    SELECT user_name, channels_count,
-           total_uploaded_hours
-    FROM summary_user
-    ORDER BY channels_count DESC
+Example 11: Unknown Team Name Rate KPI
+    SELECT unknown_team_count,
+           total_videos,
+           unknown_team_pct
+    FROM data_quality;
+
+Example 12: Published URL Completeness Rate KPI
+    SELECT published_with_url,
+           total_published,
+           url_completeness_pct
+    FROM data_quality;
+
+Example 13: Duplicate Video ID Count KPI
+    SELECT duplicate_video_ids
+    FROM data_quality;
+
+Example 14: QA / Test Account Activity KPI
+    SELECT uploaded_by,
+           COUNT(*) AS total_videos,
+           SUM(is_published) AS published_count,
+           ROUND(SUM(is_published) * 100.0
+                 / NULLIF(COUNT(*), 0), 2)
+                 AS publish_rate_pct
+    FROM fact_video_jobs
+    WHERE uploaded_by LIKE 'QA-%'
+       OR uploaded_by IN (
+           'deleteme@frammer.com',
+           'Test User',
+           'Auto Upload'
+       )
+    GROUP BY uploaded_by
+    ORDER BY total_videos DESC;
+
+Example 15: Channel × User Metric KPI
+    SELECT channel_name, user_name,
+           uploaded_count, created_count,
+           published_count, publish_rate_pct
+    FROM bridge_user_channel
+    ORDER BY uploaded_count DESC
     LIMIT 10;
+
+Example 16: User Upload Volume Rank KPI
+    SELECT user_name, channels_count,
+           total_uploaded_count,
+           total_uploaded_hours,
+           publish_rate_pct
+    FROM summary_user
+    ORDER BY total_uploaded_count DESC
+    LIMIT 10;
+
+Example 17: Total Content Hours KPI
+    SELECT
+        ROUND(SUM(uploaded_hours), 2)
+              AS total_uploaded_hours,
+        ROUND(SUM(created_hours), 2)
+              AS total_created_hours,
+        ROUND(SUM(published_hours), 2)
+              AS total_published_hours
+    FROM summary_channel;
 
