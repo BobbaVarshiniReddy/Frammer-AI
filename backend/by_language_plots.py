@@ -38,7 +38,7 @@ def get_language_publish_rate() -> tuple[pa.Table, str]:
         ORDER BY "Language_Publish_Rate_%" DESC NULLS LAST
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
@@ -73,4 +73,4 @@ def get_language_upload_share() -> tuple[pa.Table, str]:
         ORDER BY "Language_Upload_Share_%" DESC
     """).arrow()
     con.close()
-    return table, "bar"
+    return [[table, "bar"]]

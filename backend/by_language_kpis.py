@@ -24,7 +24,7 @@ def get_kpi13_language_publish_rate() -> tuple[pa.Table, str]:
         ORDER BY "Language_Publish_Rate_%" DESC NULLS LAST
     """).arrow()
     con.close()
-    return table, "KPI 13 - Language Publish Rate (%)"
+    return [[table, "KPI 13 - Language Publish Rate (%)"]]
 
 
 def get_kpi15_language_upload_share() -> tuple[pa.Table, str]:
@@ -45,4 +45,4 @@ def get_kpi15_language_upload_share() -> tuple[pa.Table, str]:
         ORDER BY "Language_Upload_Share_%" DESC
     """).arrow()
     con.close()
-    return table, "KPI 15 - Language Upload Share (%)"
+    return [[table, "KPI 15 - Language Upload Share (%)"]]
