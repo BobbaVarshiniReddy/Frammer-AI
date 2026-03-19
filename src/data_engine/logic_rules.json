@@ -1,0 +1,72 @@
+{
+    "existing_dimensions": {
+        "dim_channel": [
+            "channel"
+        ],
+        "dim_user": [
+            "user_name"
+        ],
+        "dim_language": [
+            "language"
+        ],
+        "dim_output_type": [
+            "output_type"
+        ],
+        "dim_platform": [
+            "published_platform"
+        ],
+        "dim_team": [
+            "team_name"
+        ],
+        "dim_xyz_performance": [
+            "XYZ_Performance"
+        ],
+        "dim_lang": [
+            "Lang"
+        ],
+        "dim_duration": [
+            "Duration"
+        ],
+        "dim_video_id": [
+            "video_id"
+        ],
+        "dim_video_title": [
+            "video_title"
+        ],
+        "dim_upload_date": [
+            "upload_date"
+        ],
+        "dim_total_duration": [
+            "total_duration"
+        ],
+        "dim_total_views": [
+            "total_views"
+        ],
+        "dim_ad_revenue": [
+            "ad_revenue"
+        ],
+        "dim_category": [
+            "category"
+        ],
+        "dim_useless_col": [
+            "Useless_Col"
+        ],
+        "dim_title": [
+            "Title"
+        ]
+    },
+    "kpi_registry": {
+        "video_count": {
+            "formula": "count(video_id)",
+            "type": "raw_count"
+        },
+        "published_count": {
+            "formula": "sum(case when is_published = 'Yes' then 1 else 0 end)",
+            "type": "raw_count"
+        },
+        "total_duration_sec": {
+            "formula": "sum(duration_sec)",
+            "type": "raw_count"
+        }
+    }
+}
