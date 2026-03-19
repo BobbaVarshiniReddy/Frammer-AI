@@ -1,16 +1,11 @@
 import pyarrow as pa
 from database import get_connection
 
-def get_kpi09_input_type_publish_rate() -> tuple[pa.Table, str]:
+
+def get_kpi09_input_type_publish_rate():
     """
     KPI-09: For every Input Type, the percentage of created videos
     that were eventually published.
-    Formula: (Published Count / Created Count) × 100
-    Returns
-    -------
-    table       : columns ["input_type", "publish_rate_pct"]
-                  Rows sorted by publish_rate_pct DESC.
-    description : str
     """
     con = get_connection()
     table = con.execute("""
@@ -31,53 +26,38 @@ def get_kpi09_input_type_publish_rate() -> tuple[pa.Table, str]:
         ORDER BY publish_rate_pct DESC
     """).arrow()
     con.close()
-    return table, "KPI-09 – Input Type Publish Rate (%)"
+    return [[table, "none"]]
 
 
-def get_kpi10_input_type_amplification_ratio() -> tuple[pa.Table, str]:
+def get_kpi10_input_type_amplification_ratio():
     """
-    KPI-10: For every Input Type, the ratio of created videos to
-    uploaded videos — how much the pipeline amplifies raw uploads.
-    Formula: Created Count / Uploaded Count
-
-    Returns
-    -------
-    table       : columns ["input_type", "amplification_ratio"]
-                  Rows sorted by amplification_ratio DESC.
-    description : str
+    KPI-10: Created Count / Uploaded Count
     """
     con = get_connection()
     table = con.execute("""
         SELECT
-            "input_type"                                                AS "input_type",
+            input_type,
             ROUND(
-                1.0 * SUM("created_count") / NULLIF(SUM("uploaded_count"), 0),
+                1.0 * SUM(created_count) / NULLIF(SUM(uploaded_count), 0),
                 2
-            )                                                           AS "amplification_ratio"
+            ) AS amplification_ratio
         FROM (
             SELECT
                 "Input Type"      AS input_type,
                 "Created Count"   AS created_count,
-                "Uploaded Count" AS uploaded_count,
+                "Uploaded Count"  AS uploaded_count
             FROM raw_input_type
         )
-        GROUP BY "input_type"
-        ORDER BY "amplification_ratio" DESC
+        GROUP BY input_type
+        ORDER BY amplification_ratio DESC
     """).arrow()
     con.close()
-    return table, "KPI-10 – Input Type Amplification Ratio"
+    return [[table, "none"]]
 
 
-def get_kpi19_unknown_input_type_rate() -> tuple[pa.Table, str]:
+def get_kpi19_unknown_input_type_rate():
     """
-    KPI-19 (partial): Percentage of total uploaded videos whose
-    Input Type is 'unknown' — a data-quality signal.
-    Formula: Unknown Uploaded Count / Total Uploaded Count × 100
-    Returns
-    -------
-    table       : columns ["category", "uploaded_count", "share_pct"]
-                  Two rows: 'unknown' and 'known'.
-    description : str
+    KPI-19: % of uploaded videos with unknown input type
     """
     con = get_connection()
     table = con.execute("""
@@ -88,10 +68,10 @@ def get_kpi19_unknown_input_type_rate() -> tuple[pa.Table, str]:
         grouped AS (
             SELECT
                 CASE
-                    WHEN LOWER(TRIM("Input Type")) = 'Unknown' THEN 'unknown'
+                    WHEN LOWER(TRIM("Input Type")) = 'unknown' THEN 'unknown'
                     ELSE 'known'
-                END                             AS category,
-                SUM("Uploaded Count")           AS uploaded_count
+                END AS category,
+                SUM("Uploaded Count") AS uploaded_count
             FROM raw_input_type
             GROUP BY 1
         )
@@ -101,12 +81,11 @@ def get_kpi19_unknown_input_type_rate() -> tuple[pa.Table, str]:
             ROUND(
                 100.0 * g.uploaded_count / NULLIF(t.total_uploaded, 0),
                 2
-            )                                   AS share_pct
+            ) AS share_pct
         FROM grouped g
         CROSS JOIN totals t
         ORDER BY
-            CASE WHEN g.category = 'unknown' THEN 0 ELSE 1 END ASC
+            CASE WHEN g.category = 'unknown' THEN 0 ELSE 1 END
     """).arrow()
     con.close()
-    return table, "KPI-19 – Unknown Input Type Rate (%)"
-
+    return [[table, "none"]]
