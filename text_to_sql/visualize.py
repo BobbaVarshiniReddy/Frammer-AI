@@ -133,7 +133,7 @@ def generate_chart_base64(question: str, data: dict | None) -> str | None:
             _build_chart_prompt(question, df),
             generation_config=genai.GenerationConfig(
                 temperature=0.2,
-                max_output_tokens=1000,
+                max_output_tokens=2048,
             ),
         )
         raw_code = response.text

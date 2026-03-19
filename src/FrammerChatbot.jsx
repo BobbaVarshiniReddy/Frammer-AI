@@ -19,6 +19,52 @@ const SUGGESTED_QUESTIONS = [
   "Show overall KPIs",
 ];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Builds a direct, human-readable answer from the query result.
+ * - 0 rows  → "No data found."
+ * - 1 row   → key: value pairs
+ * - many    → direct answer using the first row as the "winner",
+ *             e.g. "Channel A has the biggest drop-off with 4,654."
+ */
+function buildReplyText(question, data) {
+  if (!data || !data.rows || data.rows.length === 0) {
+    return "No data found for that query.";
+  }
+
+  const { columns, rows } = data;
+  const firstRow = rows[0];
+
+  // Single row → show all key: value pairs
+  if (rows.length === 1) {
+    return columns
+      .map((col, i) => `${col.replace(/_/g, " ")}: ${firstRow[i] ?? "—"}`)
+      .join("\n");
+  }
+
+  // Multiple rows → build a direct answer from the top result
+  // Find the "name" column (first text-looking column)
+  const nameIdx = columns.findIndex((c) =>
+    /name|type|language|month|user|channel|input|output/i.test(c)
+  );
+
+  // Find the "metric" column (first numeric-looking column after nameIdx)
+  const metricIdx = columns.findIndex(
+    (c, i) => i !== nameIdx && /count|hours|rate|pct|ratio|drop|total|avg/i.test(c)
+  );
+
+  if (nameIdx !== -1 && metricIdx !== -1) {
+    const topName   = firstRow[nameIdx];
+    const topMetric = firstRow[metricIdx];
+    const metricLabel = columns[metricIdx].replace(/_/g, " ");
+    return `${topName} leads with ${topMetric} ${metricLabel}.\n\nFull results below ↓`;
+  }
+
+  // Fallback
+  return `Found ${rows.length} results. Full breakdown below ↓`;
+}
+
 // ─── LoadingDots ──────────────────────────────────────────────────────────────
 function LoadingDots() {
   return (
@@ -35,7 +81,6 @@ function LoadingDots() {
 function ChartDisplay({ chart }) {
   if (!chart) return null;
 
-  // PNG base64
   if (chart.startsWith("data:image/png")) {
     return (
       <div className="frammer-chart-wrap">
@@ -44,7 +89,6 @@ function ChartDisplay({ chart }) {
     );
   }
 
-  // HTML base64 — render in sandboxed iframe
   if (chart.startsWith("data:text/html")) {
     const html = atob(chart.split(",")[1]);
     const blob = new Blob([html], { type: "text/html" });
@@ -76,7 +120,9 @@ function DataTable({ data }) {
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col} className="frammer-th">{col}</th>
+              <th key={col} className="frammer-th">
+                {col.replace(/_/g, " ")}
+              </th>
             ))}
           </tr>
         </thead>
@@ -84,7 +130,10 @@ function DataTable({ data }) {
           {displayRows.map((row, ri) => (
             <tr key={ri} className="frammer-tr">
               {row.map((cell, ci) => (
-                <td key={ci} className={`frammer-td${cell === null ? " frammer-td--null" : ""}`}>
+                <td
+                  key={ci}
+                  className={`frammer-td${cell === null ? " frammer-td--null" : ""}`}
+                >
                   {cell === null ? "—" : String(cell)}
                 </td>
               ))}
@@ -92,6 +141,11 @@ function DataTable({ data }) {
           ))}
         </tbody>
       </table>
+      {rows.length > 20 && (
+        <div className="frammer-table-more">
+          showing 20 of {rows.length} rows
+        </div>
+      )}
     </div>
   );
 }
@@ -100,7 +154,6 @@ function DataTable({ data }) {
 function Message({ msg }) {
   const [showSQL, setShowSQL] = useState(false);
 
-  // User bubble
   if (msg.role === "user") {
     return (
       <div className="frammer-msg-row frammer-msg-row--user">
@@ -110,7 +163,6 @@ function Message({ msg }) {
     );
   }
 
-  // Loading state
   if (msg.loading) {
     return (
       <div className="frammer-msg-row frammer-msg-row--assistant">
@@ -120,7 +172,6 @@ function Message({ msg }) {
     );
   }
 
-  // Error state
   if (msg.error) {
     return (
       <div className="frammer-msg-row frammer-msg-row--assistant">
@@ -130,19 +181,18 @@ function Message({ msg }) {
     );
   }
 
-  // Normal assistant response
   return (
     <div className="frammer-msg-row frammer-msg-row--assistant">
       <span className="frammer-msg-label frammer-msg-label--assistant">frammer ai</span>
 
-      {/* Text */}
+      {/* Direct answer text */}
       <div className="frammer-bubble frammer-bubble--assistant">{msg.content}</div>
 
-      {/* Chart — PNG or interactive HTML */}
+      {/* Chart — shown if available */}
       {msg.chart && <ChartDisplay chart={msg.chart} />}
 
-      {/* Table — shown when no chart */}
-      {msg.data && !msg.chart && <DataTable data={msg.data} />}
+      {/* Table — ALWAYS shown (whether or not chart exists) */}
+      {msg.data && <DataTable data={msg.data} />}
 
       {/* Stats pills */}
       {msg.explanation && (
@@ -174,9 +224,7 @@ function Message({ msg }) {
           >
             {showSQL ? "hide sql ▲" : "view sql ▼"}
           </button>
-          {showSQL && (
-            <pre className="frammer-sql-block">{msg.sql}</pre>
-          )}
+          {showSQL && <pre className="frammer-sql-block">{msg.sql}</pre>}
         </>
       )}
     </div>
@@ -185,25 +233,21 @@ function Message({ msg }) {
 
 // ─── FrammerChatbot (main export) ─────────────────────────────────────────────
 export default function FrammerChatbot() {
-  const [messages, setMessages] = useState([]);
-  const [input,    setInput]    = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const bottomRef  = useRef(null);
+  const [messages,  setMessages]  = useState([]);
+  const [input,     setInput]     = useState("");
+  const [loading,   setLoading]   = useState(false);
+  const bottomRef   = useRef(null);
   const textareaRef = useRef(null);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send a question to the backend
   const sendQuestion = useCallback(async (question) => {
     const q = question.trim();
     if (!q || loading) return;
 
     setInput("");
-
-    // Append user message + loading placeholder
     setMessages((prev) => [
       ...prev,
       { id: Date.now(),     role: "user",      content: q },
@@ -221,7 +265,6 @@ export default function FrammerChatbot() {
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
 
-      // Handle pipeline error from backend
       if (data.error) {
         setMessages((prev) => [
           ...prev.slice(0, -1),
@@ -231,22 +274,8 @@ export default function FrammerChatbot() {
         return;
       }
 
-      // Build reply text
-      const rows = data.data?.rows?.length ?? 0;
-      let replyText = "";
-
-      if (rows === 0) {
-        replyText = "No data found for that query.";
-      } else if (rows === 1) {
-        // Single row → key: value format
-        const cols = data.data.columns;
-        const row  = data.data.rows[0];
-        replyText  = cols.map((c, i) => `${c}: ${row[i] ?? "—"}`).join("\n");
-      } else {
-        replyText = `Found ${rows} result${rows > 1 ? "s" : ""}.${
-          data.chart ? " Chart generated below." : ""
-        }`;
-      }
+      // Build a direct, meaningful answer
+      const replyText = buildReplyText(q, data.data);
 
       setMessages((prev) => [
         ...prev.slice(0, -1),
@@ -265,8 +294,8 @@ export default function FrammerChatbot() {
       setMessages((prev) => [
         ...prev.slice(0, -1),
         {
-          id:   Date.now() + 2,
-          role: "assistant",
+          id:    Date.now() + 2,
+          role:  "assistant",
           error: `Connection error: ${err.message}. Is the backend running on port 8000?`,
         },
       ]);
@@ -275,7 +304,6 @@ export default function FrammerChatbot() {
     }
   }, [loading]);
 
-  // Enter to send, Shift+Enter for newline
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -306,7 +334,6 @@ export default function FrammerChatbot() {
       {/* ── Messages ── */}
       <div className="frammer-messages-area">
 
-        {/* Suggested questions — shown only when chat is empty */}
         {messages.length === 0 && (
           <div className="frammer-suggested-wrap">
             <div className="frammer-suggested-label">Try asking</div>
@@ -322,12 +349,10 @@ export default function FrammerChatbot() {
           </div>
         )}
 
-        {/* Chat messages */}
         {messages.map((msg) => (
           <Message key={msg.id} msg={msg} />
         ))}
 
-        {/* Scroll anchor */}
         <div ref={bottomRef} />
       </div>
 
@@ -350,7 +375,6 @@ export default function FrammerChatbot() {
             disabled={loading || !input.trim()}
             aria-label="Send"
           >
-            {/* Send icon */}
             <svg
               width="16" height="16"
               viewBox="0 0 24 24"
