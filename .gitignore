@@ -29,3 +29,4 @@ Thumbs.db
 # optional
 coverage/
 dist/
+venv/
