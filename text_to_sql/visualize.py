@@ -1,25 +1,30 @@
 """
 visualize.py  —  Chart generation module
 =========================================
-Import this in nlq_pipeline.py.
-Do not run directly.
+Generates a Plotly chart from a query result and returns it
+as a base64-encoded data-URI string (PNG preferred, HTML fallback).
+
+This module is imported by nlq_pipeline.py.
+Do NOT run directly.
 
 Install:
     pip install plotly kaleido google-generativeai
 """
 
-import os
 import re
+import base64
+import logging
 import warnings
 warnings.filterwarnings("ignore")
 
 import pandas as pd
 import google.generativeai as genai
-from config import GEMINI_API_KEY, GEMINI_MODEL
+
+from text_to_sql.config import GEMINI_API_KEY, GEMINI_MODEL
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-CHARTS_DIR = "./charts"
+logger = logging.getLogger(__name__)
 
 # ── Brand colour palette ──────────────────────────────────────────────────────
 COLOURS = ["#CC0000", "#FF3131", "#FF9A9A", "#FFD6D6", "#7A0000"]
@@ -29,10 +34,9 @@ COLOURS = ["#CC0000", "#FF3131", "#FF9A9A", "#FFD6D6", "#7A0000"]
 # INTERNAL HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _safe_filename(question: str) -> str:
-    name = re.sub(r'[^\w\s-]', '', question.lower())
-    name = re.sub(r'\s+', '_', name)[:60]
-    return name
+def _df_from_data(data: dict) -> pd.DataFrame:
+    """Reconstruct a DataFrame from the { columns, rows } dict."""
+    return pd.DataFrame(data["rows"], columns=data["columns"])
 
 
 def _build_chart_prompt(question: str, df: pd.DataFrame) -> str:
@@ -79,41 +83,40 @@ Python code:
 
 
 def _extract_code(raw: str) -> str:
-    """Strip markdown fences Gemini sometimes adds."""
     code = raw.strip()
-    code = re.sub(r'^```python\s*', '', code, flags=re.IGNORECASE)
-    code = re.sub(r'^```\s*',       '', code, flags=re.IGNORECASE)
-    code = re.sub(r'\s*```$',       '', code)
-    # Remove any show/write calls — we handle saving
-    code = re.sub(r'^\s*fig\.show\(.*\)\s*$',        '', code, flags=re.MULTILINE)
-    code = re.sub(r'^\s*fig\.write_image\(.*\)\s*$', '', code, flags=re.MULTILINE)
-    code = re.sub(r'^\s*fig\.write_html\(.*\)\s*$',  '', code, flags=re.MULTILINE)
+    code = re.sub(r"^```python\s*", "", code, flags=re.IGNORECASE)
+    code = re.sub(r"^```\s*",       "", code, flags=re.IGNORECASE)
+    code = re.sub(r"\s*```$",       "", code)
+    code = re.sub(r"^\s*fig\.show\(.*\)\s*$",        "", code, flags=re.MULTILINE)
+    code = re.sub(r"^\s*fig\.write_image\(.*\)\s*$", "", code, flags=re.MULTILINE)
+    code = re.sub(r"^\s*fig\.write_html\(.*\)\s*$",  "", code, flags=re.MULTILINE)
     return code.strip()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PUBLIC API  —  called by nlq_pipeline.py
+# PUBLIC API
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_chart(question: str, df: pd.DataFrame) -> str | None:
+def generate_chart_base64(question: str, data: dict | None) -> str | None:
     """
-    Generate a Plotly chart for the query result and save it as a PNG.
+    Generate a Plotly chart and return it as a base64 data-URI.
 
     Parameters
     ----------
-    question : str          — original user question
-    df       : pd.DataFrame — result from nlq_query
+    question : str   — original user question
+    data     : dict  — { columns: [...], rows: [[...], ...] }
+                       as returned by nlq_pipeline.execute_sql()
 
     Returns
     -------
-    filepath : str | None   — path to saved .png, or None on failure
+    str  — "data:image/png;base64,..." or "data:text/html;base64,..."
+    None — on any failure
     """
-
-    if df is None or df.empty:
-        print("  [Chart] Skipping — empty dataframe.")
+    if not data or not data.get("rows"):
+        logger.debug("Chart skipped — empty data.")
         return None
 
-    os.makedirs(CHARTS_DIR, exist_ok=True)
+    df = _df_from_data(data)
 
     # ── Step 1: Ask Gemini to write Plotly code ───────────────────────────────
     try:
@@ -124,19 +127,18 @@ def generate_chart(question: str, df: pd.DataFrame) -> str | None:
                 "Output only raw executable Python code. "
                 "Never use markdown or backticks. "
                 "Always assign the final figure to a variable called `fig`."
-            )
+            ),
         )
         response = model.generate_content(
             _build_chart_prompt(question, df),
             generation_config=genai.GenerationConfig(
                 temperature=0.2,
-                max_output_tokens=1000,
-            )
+                max_output_tokens=2048,
+            ),
         )
         raw_code = response.text
-
     except Exception as e:
-        print(f"  [Chart] Gemini code generation failed: {e}")
+        logger.error("Chart: Gemini code generation failed — %s", e)
         return None
 
     code = _extract_code(raw_code)
@@ -146,39 +148,34 @@ def generate_chart(question: str, df: pd.DataFrame) -> str | None:
         import plotly.graph_objects as go
         import plotly.express as px
 
-        exec_globals = {
-            "df"  : df,
-            "go"  : go,
-            "px"  : px,
-        }
+        exec_globals = {"df": df, "go": go, "px": px}
         exec(code, exec_globals)
         fig = exec_globals.get("fig")
 
         if fig is None:
-            print("  [Chart] Code ran but `fig` was not assigned.")
-            print(f"  [Chart] Generated code:\n{code}")
+            logger.error("Chart: code ran but `fig` was not assigned.")
             return None
 
     except Exception as e:
-        print(f"  [Chart] Code execution failed: {e}")
-        print(f"  [Chart] Generated code:\n{code}")
+        logger.error("Chart: code execution failed — %s\nGenerated code:\n%s", e, code)
         return None
 
-    # ── Step 3: Save as PNG via kaleido ──────────────────────────────────────
-    filepath = os.path.join(CHARTS_DIR, f"{_safe_filename(question)}.png")
+    # ── Step 3: Encode to base64 in memory (no disk writes) ──────────────────
     try:
-        fig.write_image(filepath, width=1000, height=600, scale=2)
-        print(f"  [Chart] Saved → {filepath}")
-        return filepath
+        png_bytes = fig.to_image(format="png", width=1000, height=600, scale=2)
+        b64 = base64.b64encode(png_bytes).decode()
+        logger.info("Chart: PNG encoded to base64 (%d bytes).", len(png_bytes))
+        return f"data:image/png;base64,{b64}"
 
-    except Exception as e:
-        # kaleido not installed — fall back to saving as HTML
-        print(f"  [Chart] PNG save failed ({e}), saving as HTML instead.")
-        html_path = filepath.replace(".png", ".html")
-        try:
-            fig.write_html(html_path)
-            print(f"  [Chart] Saved → {html_path}")
-            return html_path
-        except Exception as e2:
-            print(f"  [Chart] HTML save also failed: {e2}")
-            return None
+    except Exception as png_err:
+        logger.warning("Chart: PNG encoding failed (%s) — falling back to HTML.", png_err)
+
+    try:
+        html_str = fig.to_html(full_html=False, include_plotlyjs="cdn")
+        b64      = base64.b64encode(html_str.encode()).decode()
+        logger.info("Chart: HTML encoded to base64.")
+        return f"data:text/html;base64,{b64}"
+
+    except Exception as html_err:
+        logger.error("Chart: HTML encoding also failed — %s", html_err)
+        return None

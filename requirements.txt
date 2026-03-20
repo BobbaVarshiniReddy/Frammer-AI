@@ -1,0 +1,11 @@
+pandas
+duckdb
+langchain-core
+langchain-google-genai
+google-generativeai
+python-dotenv
+pydantic
+pathlib
+fastapi
+uvicorn
+python-multipart
