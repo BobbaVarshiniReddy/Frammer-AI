@@ -245,3 +245,4 @@ def get_channel_publish_share_per_platform(platform: str = "Youtube") -> tuple[p
     """).arrow()
     con.close()
     return table, "line"
+
