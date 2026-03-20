@@ -48,7 +48,7 @@ body {
 /* ── Executive Summary Layout — content + chatbot side by side ── */
 .executive-layout {
   display: flex;
-  height: calc(100vh - 90px); /* full height minus navbar */
+  height: calc(100vh - 90px);
   overflow: hidden;
 }
 

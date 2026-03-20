@@ -13,16 +13,18 @@ Install:
 
 import re
 import base64
+import logging
 import warnings
-import io
 warnings.filterwarnings("ignore")
 
 import pandas as pd
 import google.generativeai as genai
 
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from text_to_sql.config import GEMINI_API_KEY, GEMINI_MODEL
 
 genai.configure(api_key=GEMINI_API_KEY)
+
+logger = logging.getLogger(__name__)
 
 # ── Brand colour palette ──────────────────────────────────────────────────────
 COLOURS = ["#CC0000", "#FF3131", "#FF9A9A", "#FFD6D6", "#7A0000"]
@@ -111,7 +113,7 @@ def generate_chart_base64(question: str, data: dict | None) -> str | None:
     None — on any failure
     """
     if not data or not data.get("rows"):
-        print("  [Chart] Skipping — empty data.")
+        logger.debug("Chart skipped — empty data.")
         return None
 
     df = _df_from_data(data)
@@ -131,12 +133,12 @@ def generate_chart_base64(question: str, data: dict | None) -> str | None:
             _build_chart_prompt(question, df),
             generation_config=genai.GenerationConfig(
                 temperature=0.2,
-                max_output_tokens=1000,
+                max_output_tokens=2048,
             ),
         )
         raw_code = response.text
     except Exception as e:
-        print(f"  [Chart] Gemini code generation failed: {e}")
+        logger.error("Chart: Gemini code generation failed — %s", e)
         return None
 
     code = _extract_code(raw_code)
@@ -151,30 +153,29 @@ def generate_chart_base64(question: str, data: dict | None) -> str | None:
         fig = exec_globals.get("fig")
 
         if fig is None:
-            print("  [Chart] Code ran but `fig` was not assigned.")
+            logger.error("Chart: code ran but `fig` was not assigned.")
             return None
 
     except Exception as e:
-        print(f"  [Chart] Code execution failed: {e}")
-        print(f"  [Chart] Generated code:\n{code}")
+        logger.error("Chart: code execution failed — %s\nGenerated code:\n%s", e, code)
         return None
 
     # ── Step 3: Encode to base64 in memory (no disk writes) ──────────────────
     try:
         png_bytes = fig.to_image(format="png", width=1000, height=600, scale=2)
         b64 = base64.b64encode(png_bytes).decode()
-        print("  [Chart] PNG encoded to base64.")
+        logger.info("Chart: PNG encoded to base64 (%d bytes).", len(png_bytes))
         return f"data:image/png;base64,{b64}"
 
     except Exception as png_err:
-        print(f"  [Chart] PNG encoding failed ({png_err}), falling back to HTML.")
+        logger.warning("Chart: PNG encoding failed (%s) — falling back to HTML.", png_err)
 
     try:
-        html_str  = fig.to_html(full_html=False, include_plotlyjs="cdn")
-        b64       = base64.b64encode(html_str.encode()).decode()
-        print("  [Chart] HTML encoded to base64.")
+        html_str = fig.to_html(full_html=False, include_plotlyjs="cdn")
+        b64      = base64.b64encode(html_str.encode()).decode()
+        logger.info("Chart: HTML encoded to base64.")
         return f"data:text/html;base64,{b64}"
 
     except Exception as html_err:
-        print(f"  [Chart] HTML encoding also failed: {html_err}")
+        logger.error("Chart: HTML encoding also failed — %s", html_err)
         return None
