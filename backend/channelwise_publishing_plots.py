@@ -174,4 +174,9 @@ def get_channel_publish_share_per_platform() -> list:
         LIMIT 15
     """).arrow()
     con.close()
+<<<<<<< HEAD
     return [[table, "bar"]]   # ✅ bar not line
+=======
+    return table, "line"
+
+>>>>>>> 2adae5b9a9b2e0b00a867267b56e0f44b4b29d3b
