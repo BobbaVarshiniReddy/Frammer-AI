@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-import MultiDimension from "./tabs/multidim";
+import Extensibility from "./tabs/Extensibility";
 import ExecutiveSummary from "./tabs/ExecutiveSummary";
 import UsageTrends from "./tabs/UsageTrends";
 import ClientChannel from "./tabs/ClientChannel";
@@ -25,11 +25,10 @@ function App() {
           <button onClick={() => setActiveTab("client")}>Client & Channel Analysis</button>
           <button onClick={() => setActiveTab("funnel")}>Type & Funnel</button>
           <button onClick={() => setActiveTab("video")}>Video Explorer</button>
-          <button onClick={() => setActiveTab("dimension")}>Multi Dimension</button>
+          <button onClick={() => setActiveTab("dimension")}>Extensibility</button>
         </div>
       </div>
 
-      {/* Executive Summary — chatbot sidebar on the right */}
       {activeTab === "executive" && (
         <div className="executive-layout">
           <div className="executive-content">
@@ -43,7 +42,7 @@ function App() {
       {activeTab === "client"    && <ClientChannel />}
       {activeTab === "funnel"    && <Funnel />}
       {activeTab === "video"     && <VideoExplorer />}
-      {activeTab === "dimension" && <MultiDimension />}
+      {activeTab === "dimension" && <Extensibility />}
     </div>
   );
 }

@@ -8,5 +8,5 @@ DB_PATH     = os.path.join(_ROOT, "database", "frammer.db")
 DATA_PATH   = os.path.join(_ROOT, "data") + os.sep
 SCHEMA_PATH = os.path.join(_ROOT, "llm_schema.txt")
 
-GEMINI_API_KEY = ""
+GEMINI_API_KEY = "AIzaSyAjiyr_XDiRbPsKX15h6XxKPSTgF-pUZKU"
 GEMINI_MODEL   = "gemini-2.5-flash"
