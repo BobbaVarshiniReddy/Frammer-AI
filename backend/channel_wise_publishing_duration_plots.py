@@ -20,21 +20,21 @@ PLATFORM_COLS = [
 
 def parse_duration_to_seconds(col: str) -> str:
     """
-    DuckDB-native HH:MM:SS → total seconds conversion.
+    ✅ Fix: VARCHAR SPLIT_PART approach — handles >24h values
+    DuckDB cannot cast TIME > 23:59:59 or use INTERVAL on duration columns
     """
-    return f"epoch(CAST({col} AS INTERVAL))"
+    return f"""(
+        CAST(SPLIT_PART(CAST({col} AS VARCHAR), ':', 1) AS INTEGER) * 3600 +
+        CAST(SPLIT_PART(CAST({col} AS VARCHAR), ':', 2) AS INTEGER) * 60   +
+        CAST(SPLIT_PART(CAST({col} AS VARCHAR), ':', 3) AS INTEGER)
+    )"""
 
 
 # ---------------------------------------------------------------------------
-# Plot 1 — Platform Duration Distribution (KPI-14)
-# Bar: each platform's % share of total duration
+# Plot 1 — Platform Duration Distribution
 # ---------------------------------------------------------------------------
-
-def get_platform_duration_distribution() -> tuple[pa.Table, str]:
+def get_platform_duration_distribution() -> list:
     """
-    Plot 1 (KPI-14): Bar – percentage share of total published duration
-    per platform across all channels.
-
     Returns
     -------
     table      : columns ["Platform", "total_seconds", "share_pct"]
@@ -45,11 +45,11 @@ def get_platform_duration_distribution() -> tuple[pa.Table, str]:
     union_parts = []
     for col in PLATFORM_COLS:
         platform_name = col.replace(" Duration", "")
-        sec_expr = parse_duration_to_seconds(f'"{col}"')
+        sec_expr      = parse_duration_to_seconds(f'"{col}"')
         union_parts.append(f"""
             SELECT
-                '{platform_name}'   AS "Platform",
-                {sec_expr}          AS "seconds"
+                '{platform_name}' AS "Platform",
+                {sec_expr}        AS "seconds"
             FROM raw_channel_duration
         """)
 
@@ -61,11 +61,11 @@ def get_platform_duration_distribution() -> tuple[pa.Table, str]:
         )
         SELECT
             "Platform",
-            ROUND(SUM("seconds"), 2)                                    AS "total_seconds",
+            ROUND(SUM("seconds"), 2)                               AS "total_seconds",
             ROUND(
                 100.0 * SUM("seconds") / SUM(SUM("seconds")) OVER (),
                 2
-            )                                                           AS "share_pct"
+            )                                                      AS "share_pct"
         FROM all_platforms
         GROUP BY "Platform"
         ORDER BY "share_pct" DESC
@@ -76,15 +76,10 @@ def get_platform_duration_distribution() -> tuple[pa.Table, str]:
 
 
 # ---------------------------------------------------------------------------
-# Plot 2 — Absolute Duration by Platform (KPI-05)
-# Bar: total seconds published per platform
+# Plot 2 — Absolute Duration by Platform
 # ---------------------------------------------------------------------------
-
-def get_absolute_duration_by_platform() -> tuple[pa.Table, str]:
+def get_absolute_duration_by_platform() -> list:
     """
-    Plot 2 (KPI-05): Bar – total published duration in seconds per platform,
-    sorted descending.
-
     Returns
     -------
     table      : columns ["Platform", "total_seconds"]
@@ -95,11 +90,11 @@ def get_absolute_duration_by_platform() -> tuple[pa.Table, str]:
     union_parts = []
     for col in PLATFORM_COLS:
         platform_name = col.replace(" Duration", "")
-        sec_expr = parse_duration_to_seconds(f'"{col}"')
+        sec_expr      = parse_duration_to_seconds(f'"{col}"')
         union_parts.append(f"""
             SELECT
-                '{platform_name}'   AS "Platform",
-                {sec_expr}          AS "seconds"
+                '{platform_name}' AS "Platform",
+                {sec_expr}        AS "seconds"
             FROM raw_channel_duration
         """)
 
@@ -123,15 +118,9 @@ def get_absolute_duration_by_platform() -> tuple[pa.Table, str]:
 
 # ---------------------------------------------------------------------------
 # Plot 3 — Channel Total Duration
-# Bar: grand total seconds per channel across all platforms
 # ---------------------------------------------------------------------------
-
-def get_channel_total_duration() -> tuple[pa.Table, str]:
+def get_channel_total_duration() -> list:
     """
-    Plot 3: Bar – total published duration (seconds) per channel,
-    summed across all platforms. Sorted descending.
-    Excludes channels with zero total duration.
-
     Returns
     -------
     table      : columns ["Channels", "total_seconds"]
@@ -146,16 +135,9 @@ def get_channel_total_duration() -> tuple[pa.Table, str]:
     table = con.execute(f"""
         SELECT
             "Channels",
-            ROUND(
-                (
-                    {total_expr}
-                ),
-                2
-            ) AS "total_seconds"
+            ROUND(({total_expr}), 2) AS "total_seconds"
         FROM raw_channel_duration
-        WHERE (
-            {total_expr}
-        ) > 0
+        WHERE ({total_expr}) > 0
         ORDER BY "total_seconds" DESC
     """).arrow()
 
@@ -165,14 +147,10 @@ def get_channel_total_duration() -> tuple[pa.Table, str]:
 
 # ---------------------------------------------------------------------------
 # Plot 4 — Channel × Platform Duration Heatmap
-# Heatmap: seconds per channel per platform
+# ✅ Fix: "Channels" first, "Platform" second for correct heatmap rendering
 # ---------------------------------------------------------------------------
-
-def get_channel_platform_duration_heatmap() -> tuple[pa.Table, str]:
+def get_channel_platform_duration_heatmap() -> list:
     """
-    Plot 4: Heatmap – duration in seconds for each (Channel, Platform)
-    combination, in long format suitable for a heatmap.
-
     Returns
     -------
     table      : columns ["Channels", "Platform", "seconds"]
@@ -183,11 +161,11 @@ def get_channel_platform_duration_heatmap() -> tuple[pa.Table, str]:
     union_parts = []
     for col in PLATFORM_COLS:
         platform_name = col.replace(" Duration", "")
-        sec_expr = parse_duration_to_seconds(f'"{col}"')
+        sec_expr      = parse_duration_to_seconds(f'"{col}"')
         union_parts.append(f"""
             SELECT
-                "Channels"          AS "Channels",
-                '{platform_name}'   AS "Platform",
+                "Channels"           AS "Channels",
+                '{platform_name}'    AS "Platform",
                 ROUND({sec_expr}, 2) AS "seconds"
             FROM raw_channel_duration
         """)
@@ -204,23 +182,14 @@ def get_channel_platform_duration_heatmap() -> tuple[pa.Table, str]:
 
 
 # ---------------------------------------------------------------------------
-# Plot 5 — Top N Active Channels by Duration
-# Line: top N channels with highest total duration
+# Plot 5 — Top N Channels by Duration
 # ---------------------------------------------------------------------------
-
-def get_top_channels_by_duration(top_n: int = 7) -> tuple[pa.Table, str]:
+def get_top_channels_by_duration(top_n: int = 7) -> list:
     """
-    Plot 5: Line – top N channels ranked by total published duration
-    across all platforms. Excludes zero-duration channels.
-
-    Parameters
-    ----------
-    top_n : int, default 7
-
     Returns
     -------
     table      : columns ["Channels", "total_seconds"]
-    chart_type : "line"
+    chart_type : "bar"
     """
     con = get_connection()
 
@@ -231,50 +200,39 @@ def get_top_channels_by_duration(top_n: int = 7) -> tuple[pa.Table, str]:
     table = con.execute(f"""
         SELECT
             "Channels",
-            ROUND(
-                (
-                    {total_expr}
-                ),
-                2
-            ) AS "total_seconds"
+            ROUND(({total_expr}), 2) AS "total_seconds"
         FROM raw_channel_duration
-        WHERE (
-            {total_expr}
-        ) > 0
+        WHERE ({total_expr}) > 0
         ORDER BY "total_seconds" DESC
         LIMIT {top_n}
     """).arrow()
 
     con.close()
-    return [[table, "line"]]
+    return [[table, "bar"]]
 
 
 # ---------------------------------------------------------------------------
-# Plot 6 — Platform Duration Share per Channel (% breakdown)
-# Line: for each active channel, % of their duration on each platform
+# Plot 6 — Platform Share per Channel
+# ✅ Fix: "Channels" first, "Platform" second for small_multiples
 # ---------------------------------------------------------------------------
-
-def get_platform_share_per_channel() -> tuple[pa.Table, str]:
+def get_platform_share_per_channel() -> list:
     """
-    Plot 6: Line – for each active channel, the percentage of their total
-    duration that was published on each platform.
-
     Returns
     -------
     table      : columns ["Channels", "Platform", "share_pct"]
-    chart_type : "line"
+    chart_type : "small_multiples"
     """
     con = get_connection()
 
     union_parts = []
     for col in PLATFORM_COLS:
         platform_name = col.replace(" Duration", "")
-        sec_expr = parse_duration_to_seconds(f'"{col}"')
+        sec_expr      = parse_duration_to_seconds(f'"{col}"')
         union_parts.append(f"""
             SELECT
-                "Channels"          AS "Channels",
-                '{platform_name}'   AS "Platform",
-                {sec_expr}          AS "seconds"
+                "Channels"        AS "Channels",
+                '{platform_name}' AS "Platform",
+                {sec_expr}        AS "seconds"
             FROM raw_channel_duration
         """)
 
@@ -306,32 +264,22 @@ def get_platform_share_per_channel() -> tuple[pa.Table, str]:
     """).arrow()
 
     con.close()
-    return [[table, "line"]]
+    return [[table, "small_multiples"]]
 
 
-# ---------------------------------------------------------------------------
-# Plot 7 — Data Completeness Heatmap (zero-duration check)
-# Heatmap: % of channels with non-zero duration per platform
-# ---------------------------------------------------------------------------
-
-def get_platform_coverage_heatmap() -> tuple[pa.Table, str]:
+def get_platform_coverage_heatmap() -> list:
     """
-    Plot 7: Heatmap – for each platform, the percentage of channels
-    that have a non-zero published duration (i.e. actually used it).
-
     Returns
     -------
     table      : columns ["Platform", "active_channel_pct"]
-    chart_type : "heatmap"
+    chart_type : "bar"
     """
-    con = get_connection()
-
     select_exprs = []
     for col in PLATFORM_COLS:
         platform_name = col.replace(" Duration", "")
-        sec_expr = parse_duration_to_seconds(f'"{col}"')
+        sec_expr      = parse_duration_to_seconds(f'"{col}"')
         select_exprs.append(
-            f"ROUND(100.0 * SUM(CASE WHEN {sec_expr} > 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS \"{platform_name}\""
+            f'ROUND(100.0 * SUM(CASE WHEN {sec_expr} > 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS "{platform_name}"'
         )
 
     con = get_connection()
@@ -342,8 +290,9 @@ def get_platform_coverage_heatmap() -> tuple[pa.Table, str]:
     con.close()
 
     platform_names = [col.replace(" Duration", "") for col in PLATFORM_COLS]
+
     table = pa.table({
-        "Platform":           pa.array(platform_names, type=pa.string()),
-        "active_channel_pct": pa.array(list(wide),    type=pa.float64()),
+        "Platform"          : pa.array(platform_names, type=pa.string()),
+        "active_channel_pct": pa.array(list(wide),     type=pa.float64()),
     })
-    return [[table, "heatmap"]]
+    return [[table, "bar"]]   # ✅ Changed from "heatmap" to "bar"

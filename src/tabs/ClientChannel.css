@@ -1,95 +1,67 @@
-/* .client-dashboard {
-  padding: 40px;
-  color: #f0f0f0;
-}
-
-.title {
-  margin-bottom: 20px;
-  color: #ffffff;
-}
-
-.filters {
-  margin-bottom: 20px;
-}
-
-.filters select {
-  background: #151a24;
-  color: #f0f0f0;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-.analysis-card {
-  background: #151a24;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-.kpi-container {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.kpi-card {
-  background: #f5f7ff;
-  padding: 16px;
-  border-radius: 10px;
-  text-align: center;
-  color: #151a24;
-  min-width: 120px;
-} */
- /* src/styles/ClientChannel.css */
-
 .client-dashboard {
-  padding: 20px;
-  color: white;
-  font-family: Arial, sans-serif;
+  padding          : 30px;
+  color            : white;
+  font-family      : "Inter", Arial, sans-serif;
+  background-color : #0D0D0D;
+  min-height       : 100vh;
 }
 
 .title {
-  margin-bottom: 16px;
-  font-size: 24px;
+  margin-bottom : 24px;
+  font-size     : 26px;
+  font-weight   : 700;
+  color         : #FF4649;
+  border-left   : 4px solid #FF4649;
+  padding-left  : 12px;
 }
 
 .selectors {
-  display: flex;
-  gap: 40px;
-  margin-bottom: 16px;
+  display       : flex;
+  gap           : 40px;
+  margin-bottom : 16px;
 }
 
 .plot-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  display   : flex;
+  flex-wrap : wrap;
+  gap       : 20px;
 }
 
 .plot-wrapper {
-  flex: 1 1 45%; /* two plots side by side */
-  background-color: black;
-  padding: 10px;
-  border-radius: 8px;
+  flex             : 1 1 45%;
+  background-color : #111111;
+  padding          : 16px;
+  border-radius    : 10px;
+  border           : 1px solid #2A2A2A;
 }
 
 .kpi-table {
-  width: 100%;
-  border-collapse: collapse;
-  color: white;
+  width           : 100%;
+  border-collapse : collapse;
+  color           : white;
+  font-size       : 13px;
 }
 
 .kpi-table th,
 .kpi-table td {
-  border: 1px solid gray;
-  padding: 6px 10px;
-  text-align: left;
+  border     : 1px solid #2A2A2A;
+  padding    : 8px 12px;
+  text-align : left;
 }
 
 .kpi-table th {
-  background-color: #222;
+  background-color : #1A1A1A;
+  color            : #FF4649;
+  font-weight      : 600;
+  letter-spacing   : 0.05em;
+  text-transform   : uppercase;
+  font-size        : 12px;
 }
 
 .kpi-table tbody tr:nth-child(even) {
-  background-color: #111;
+  background-color : #151515;
+}
+
+.kpi-table tbody tr:hover {
+  background-color : #1A1A1A;
 }

@@ -1,33 +1,34 @@
 """
-Plots for CLIENT_1_combined_data.csv
+Plots for raw_client1_combined_data
 """
 
 import pyarrow as pa
 from database import get_connection
 
+# ⚠️ Check your actual table name at http://127.0.0.1:8000/debug/tables
+# and replace "raw_client1_combined" below if different
+TABLE = "raw_channel_summary"
+
 
 # ---------------------------------------------------------------------------
 # Plot 1 — Publish Rate by Channel
 # ---------------------------------------------------------------------------
-
 def get_publish_rate_by_channel() -> tuple[pa.Table, str]:
     """
-    Plot: Publish Rate (%) per channel
-
     Returns
     -------
     table      : ["Channel", "publish_rate"]
     chart_type : "bar"
     """
     con = get_connection()
-    table = con.execute("""
+    table = con.execute(f"""
         SELECT
             "Channel",
             ROUND(
                 100.0 * "Published Count" / NULLIF("Created Count", 0),
                 2
             ) AS "publish_rate"
-        FROM client_1_combined_data
+        FROM {TABLE}
         ORDER BY "publish_rate" DESC NULLS LAST
     """).arrow()
     con.close()
@@ -37,37 +38,32 @@ def get_publish_rate_by_channel() -> tuple[pa.Table, str]:
 # ---------------------------------------------------------------------------
 # Plot 2 — Uploaded vs Created vs Published Counts
 # ---------------------------------------------------------------------------
-
 def get_content_flow_counts() -> tuple[pa.Table, str]:
     """
-    Plot: Content pipeline comparison
-
     Returns
     -------
     table      : ["Channel", "Uploaded", "Created", "Published"]
     chart_type : "bar"
     """
     con = get_connection()
-    table = con.execute("""
+    table = con.execute(f"""
         SELECT
             "Channel",
             "Uploaded Count"  AS "Uploaded",
             "Created Count"   AS "Created",
             "Published Count" AS "Published"
-        FROM client_1_combined_data
+        FROM {TABLE}
     """).arrow()
     con.close()
     return table, "bar"
 
 
+ 
 # ---------------------------------------------------------------------------
 # Plot 3 — Total Duration by Channel
 # ---------------------------------------------------------------------------
-
 def get_total_duration_by_channel() -> tuple[pa.Table, str]:
     """
-    Plot: Total duration (Uploaded + Created + Published)
-
     Returns
     -------
     table      : ["Channel", "total_duration_sec"]
@@ -75,16 +71,30 @@ def get_total_duration_by_channel() -> tuple[pa.Table, str]:
     """
     con = get_connection()
     table = con.execute("""
-        SELECT
-            "Channel",
+    SELECT
+        "Channel",
+        ROUND(
             (
-                EXTRACT(EPOCH FROM CAST("Uploaded Duration (hh:mm:ss)" AS TIME)) +
-                EXTRACT(EPOCH FROM CAST("Created Duration (hh:mm:ss)" AS TIME)) +
-                EXTRACT(EPOCH FROM CAST("Published Duration (hh:mm:ss)" AS TIME))
-            ) AS "total_duration_sec"
-        FROM client_1_combined_data
-        ORDER BY "total_duration_sec" DESC
-    """).arrow()
+                (
+                    CAST(SPLIT_PART(CAST("Uploaded Duration (hh:mm:ss)"  AS VARCHAR), ':', 1) AS INTEGER) * 3600 +
+                    CAST(SPLIT_PART(CAST("Uploaded Duration (hh:mm:ss)"  AS VARCHAR), ':', 2) AS INTEGER) * 60   +
+                    CAST(SPLIT_PART(CAST("Uploaded Duration (hh:mm:ss)"  AS VARCHAR), ':', 3) AS INTEGER)
+                ) +
+                (
+                    CAST(SPLIT_PART(CAST("Created Duration (hh:mm:ss)"   AS VARCHAR), ':', 1) AS INTEGER) * 3600 +
+                    CAST(SPLIT_PART(CAST("Created Duration (hh:mm:ss)"   AS VARCHAR), ':', 2) AS INTEGER) * 60   +
+                    CAST(SPLIT_PART(CAST("Created Duration (hh:mm:ss)"   AS VARCHAR), ':', 3) AS INTEGER)
+                ) +
+                (
+                    CAST(SPLIT_PART(CAST("Published Duration (hh:mm:ss)" AS VARCHAR), ':', 1) AS INTEGER) * 3600 +
+                    CAST(SPLIT_PART(CAST("Published Duration (hh:mm:ss)" AS VARCHAR), ':', 2) AS INTEGER) * 60   +
+                    CAST(SPLIT_PART(CAST("Published Duration (hh:mm:ss)" AS VARCHAR), ':', 3) AS INTEGER)
+                )
+            ) / 3600.0,   -- ✅ Convert seconds → hours
+        2) AS "total_duration_hours"
+    FROM raw_channel_summary
+    ORDER BY "total_duration_hours" DESC
+""").arrow()
     con.close()
     return table, "bar"
 
@@ -92,25 +102,22 @@ def get_total_duration_by_channel() -> tuple[pa.Table, str]:
 # ---------------------------------------------------------------------------
 # Plot 4 — Created vs Published Efficiency
 # ---------------------------------------------------------------------------
-
 def get_created_vs_published_efficiency() -> tuple[pa.Table, str]:
     """
-    Plot: Created vs Published efficiency per channel
-
     Returns
     -------
     table      : ["Channel", "efficiency_pct"]
     chart_type : "line"
     """
     con = get_connection()
-    table = con.execute("""
+    table = con.execute(f"""
         SELECT
             "Channel",
             ROUND(
                 100.0 * "Published Count" / NULLIF("Created Count", 0),
                 2
             ) AS "efficiency_pct"
-        FROM client_1_combined_data
+        FROM {TABLE}
         ORDER BY "efficiency_pct" DESC NULLS LAST
     """).arrow()
     con.close()
@@ -118,24 +125,21 @@ def get_created_vs_published_efficiency() -> tuple[pa.Table, str]:
 
 
 # ---------------------------------------------------------------------------
-# Plot 5 — Zero Publish Channels (Highlight)
+# Plot 5 — Zero Publish Channels
 # ---------------------------------------------------------------------------
-
 def get_zero_publish_channels_detail() -> tuple[pa.Table, str]:
     """
-    Plot: Channels with zero published content
-
     Returns
     -------
     table      : ["Channel", "Created Count"]
     chart_type : "bar"
     """
     con = get_connection()
-    table = con.execute("""
+    table = con.execute(f"""
         SELECT
             "Channel",
             "Created Count"
-        FROM client_1_combined_data
+        FROM {TABLE}
         WHERE "Published Count" = 0
         ORDER BY "Created Count" DESC
     """).arrow()

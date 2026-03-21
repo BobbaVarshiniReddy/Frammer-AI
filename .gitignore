@@ -30,3 +30,28 @@ Thumbs.db
 coverage/
 dist/
 venv/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+database/frammer.db
+
+# CSV data files
+*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
