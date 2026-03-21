@@ -1,6 +1,6 @@
 /* ─── Extensibility.css ─────────────────────────────────────────────────────
    Color palette (from project):
-   #4d77ff       — primary blue
+   #ff4649       
    #4d77ff14     — blue tint bg
    #ff4649       — red / danger
    #0e0f11       — deepest bg
@@ -58,7 +58,7 @@
 .ext-state-active {
   background: #4d77ff14;
   border: 1.5px solid #4d77ff;
-  color: #4d77ff;
+  color: #ff4649;
 }
 
 .ext-state-done {
@@ -95,7 +95,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4d77ff;
+  background: #ff4649;;
   display: inline-block;
 }
 
@@ -156,7 +156,7 @@
 .ext-btn:active { transform: translateY(0); }
 
 .ext-btn-start {
-  background: #4d77ff;
+  background: #ff4649;
   color: #fff;
   align-self: flex-start;
   padding: 12px 28px;
@@ -184,7 +184,7 @@
 /* ── Confusion Card ── */
 .ext-confusion-card {
   background: #1c1d1fcc;
-  border: 1px solid #4d77ff;
+  border: 1px solid #ff4649;;
   border-radius: 14px;
   padding: 22px 24px;
   box-shadow: 0 0 24px #4d77ff14;
@@ -214,8 +214,8 @@
 
 .ext-confidence-badge {
   background: #4d77ff14;
-  border: 1px solid #4d77ff;
-  color: #4d77ff;
+  border: 1px solid #ff4649;;
+  color: #ff4649;;
   font-size: 11px;
   font-weight: 600;
   padding: 3px 10px;
@@ -236,7 +236,7 @@
   padding: 2px 7px;
   font-family: monospace;
   font-size: 13px;
-  color: #4d77ff;
+  color: #ff4649;;
 }
 
 .ext-confusion-actions {
@@ -279,7 +279,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid #ffffff29;
-  border-top-color: #4d77ff;
+  border-top-color: #ff4649;;
   border-radius: 50%;
   animation: ext-spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -394,14 +394,14 @@
 
 .ext-bar-fill {
   height: 100%;
-  background: #4d77ff;
+  background: #ff4649;
   border-radius: 4px;
   transition: width 0.8s ease;
 }
 
 .ext-bar-value {
   font-size: 11px;
-  color: #4d77ff;
+  color: #ff4649;;
   width: 28px;
   text-align: right;
   flex-shrink: 0;
@@ -419,7 +419,7 @@
   line-height: 1.6;
 }
 
-.ext-highlight { color: #4d77ff; font-weight: 700; }
+.ext-highlight { color: #ff4649;; font-weight: 700; }
 
 /* Agent log in sidebar */
 .ext-sidebar-log {
@@ -440,6 +440,6 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4d77ff;
+  background: #ff4649;;
   flex-shrink: 0;
 }
