@@ -1,0 +1,107 @@
+.funnel-dashboard {
+  padding: 30px;
+  color: white;
+}
+
+.title {
+  margin-bottom: 20px;
+}
+
+.funnel-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.funnel-card {
+  background: #151a24;
+  padding: 20px;
+  border-radius: 10px;
+  flex: 1;
+  min-width: 300px;
+}
+
+/* Funnel Steps */
+.funnel-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.step {
+  padding: 10px 15px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.upload {
+  background: #3b82f6;
+}
+
+.process {
+  background: #f59e0b;
+}
+
+.publish {
+  background: #10b981;
+}
+
+/* Content Type */
+.type-list {
+  margin-top: 15px;
+}
+
+.type-item {
+  margin-bottom: 10px;
+}
+
+.type-bar {
+  height: 8px;
+  background: #ff4757;
+  border-radius: 5px;
+  margin-top: 5px;
+}
+
+/* KPI Section */
+.kpi-selector {
+  margin-bottom: 15px;
+}
+
+.kpi-selector select {
+  margin-left: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.kpi-card {
+  background: #151a24;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+/* Table */
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #333;
+  padding: 6px;
+  text-align: center;
+}
+
+th {
+  background: #222;
+}
+
+.table-note {
+  color: gray;
+  margin-top: 5px;
+}

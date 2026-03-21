@@ -1,58 +1,131 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./VideoExplorer.css";
 import { BsGrid3X3Gap, BsGrid1X2, BsGrid } from "react-icons/bs";
 
-const sampleVideos = [
-  {
-    id: 1,
-    title: "Election Interview Highlights",
-    channel: "Politics",
-    duration: "0:45",
-    type: "Reel",
-    language: "Hindi",
-    status: "Published",
-    thumbnail: "https://picsum.photos/400/200?1"
-  },
-  {
-    id: 2,
-    title: "Cricket Match Analysis",
-    channel: "Sports",
-    duration: "1:10",
-    type: "Short",
-    language: "English",
-    status: "Not Published",
-    thumbnail: "https://picsum.photos/400/200?2"
-  },
-  {
-    id: 3,
-    title: "AI Conference Speech",
-    channel: "Tech",
-    duration: "2:05",
-    type: "Summary",
-    language: "English",
-    status: "Published",
-    thumbnail: "https://picsum.photos/400/200?3"
-  }
-];
-
 export default function VideoExplorer() {
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({
-    language: "",
-    type: "",
-    status: ""
-  });
+  const PAGE_SIZE = 12;
+
   const [gridSize, setGridSize] = useState(3);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
-  const filteredVideos = sampleVideos.filter((video) => {
-    return (
-      video.title.toLowerCase().includes(search.toLowerCase()) &&
-      (!filters.language || video.language === filters.language) &&
-      (!filters.type || video.type === filters.type) &&
-      (!filters.status || video.status === filters.status)
-    );
+  const [metaTypes, setMetaTypes] = useState([]);
+  const [metaUploaders, setMetaUploaders] = useState([]);
+
+  const [filters, setFilters] = useState({
+    name: "",
+    type: "",
+    uploaded_by: "",
+    video_id: "",
   });
+
+  const [videos, setVideos] = useState([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [sortLabel] = useState("A-Z (Headline)");
+
+  const sentinelRef = useRef(null);
+
+  const buildUrl = (nextOffset) => {
+    const params = new URLSearchParams();
+    if (filters.name) params.append("name", filters.name);
+    if (filters.type) params.append("type", filters.type);
+    if (filters.uploaded_by) params.append("uploaded_by", filters.uploaded_by);
+    if (filters.video_id) params.append("video_id", filters.video_id);
+    params.append("offset", String(nextOffset));
+    params.append("limit", String(PAGE_SIZE));
+    return `http://127.0.0.1:8000/videos?${params.toString()}`;
+  };
+
+  const fetchMeta = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/videos/meta");
+      const data = await res.json();
+      setMetaTypes(data.types || []);
+      setMetaUploaders(data.uploaded_by || []);
+    } catch (e) {
+      setMetaTypes([]);
+      setMetaUploaders([]);
+    }
+  };
+
+  const loadPage = async ({ nextOffset, append }) => {
+    setError(null);
+    if (!append) {
+      setInitialLoading(true);
+    }
+    setLoading(true);
+
+    try {
+      const res = await fetch(buildUrl(nextOffset));
+      const resData = await res.json();
+
+      if (resData.error) {
+        setError(resData.error);
+        setVideos([]);
+        setHasMore(false);
+        return;
+      }
+
+      const nextVideos = resData.data || [];
+      setVideos((prev) => (append ? [...prev, ...nextVideos] : nextVideos));
+      setOffset(resData.next_offset ?? nextOffset + nextVideos.length);
+      setHasMore(Boolean(resData.has_more));
+    } catch (e) {
+      setError(e.message || "Failed to load videos");
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+      setInitialLoading(false);
+    }
+  };
+
+  const loadFirstPage = () => {
+    setVideos([]);
+    setOffset(0);
+    setHasMore(true);
+    loadPage({ nextOffset: 0, append: false });
+  };
+
+  const loadMore = () => {
+    if (loading || !hasMore) return;
+    // Prevent duplicate initial fetch while the first page is not loaded yet.
+    if (offset === 0 && videos.length === 0) return;
+    loadPage({ nextOffset: offset, append: true });
+  };
+
+  useEffect(() => {
+    fetchMeta();
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      loadFirstPage();
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.name, filters.type, filters.uploaded_by, filters.video_id]);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first && first.isIntersecting) {
+          loadMore();
+        }
+      },
+      { root: null, rootMargin: "250px", threshold: 0 }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sentinelRef, offset, hasMore, loading, filters]);
 
   return (
     <div className="container">
@@ -60,49 +133,42 @@ export default function VideoExplorer() {
 
       <div className="controls">
         <div className="left-controls">
+          <select
+            className={`select-field ${filters.type ? "active-field" : ""}`}
+            value={filters.type}
+            onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))}
+          >
+            <option value="">Type</option>
+            {metaTypes.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className={`select-field ${filters.uploaded_by ? "active-field" : ""}`}
+            value={filters.uploaded_by}
+            onChange={(e) => setFilters((prev) => ({ ...prev, uploaded_by: e.target.value }))}
+          >
+            <option value="">Uploaded By</option>
+            {metaUploaders.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
 
           <input
             type="text"
-            placeholder="Search videos..."
+            placeholder="Video ID"
             className="input-field"
-            onChange={(e) => setSearch(e.target.value)}
+            value={filters.video_id}
+            onChange={(e) => setFilters((prev) => ({ ...prev, video_id: e.target.value }))}
           />
-
-          <select
-            className={`select-field ${filters.language ? "active-field" : ""}`}
-            onChange={(e) =>
-              setFilters({ ...filters, language: e.target.value })
-            }
-          >
-            <option value="">Language</option>
-            <option value="Hindi">Hindi</option>
-            <option value="English">English</option>
-          </select>
-
-          <select
-            className={`select-field ${filters.type ? "active-field" : ""}`}
-            onChange={(e) =>
-              setFilters({ ...filters, type: e.target.value })
-            }
-          >
-            <option value="">Video Type</option>
-            <option value="Reel">Reel</option>
-            <option value="Short">Short</option>
-            <option value="Summary">Summary</option>
-          </select>
-
-          <select
-            className={`select-field ${filters.status ? "active-field" : ""}`}
-            onChange={(e) =>
-              setFilters({ ...filters, status: e.target.value })
-            }
-          >
-            <option value="">Status</option>
-            <option value="Published">Published</option>
-            <option value="Not Published">Not Published</option>
-          </select>
-
         </div>
+
+        <div style={{ color: "#ffffff7a", alignSelf: "center" }}>{sortLabel}</div>
 
         <div className="grid-icons">
           <BsGrid1X2
@@ -120,40 +186,54 @@ export default function VideoExplorer() {
         </div>
       </div>
 
+      {initialLoading && <p>Loading videos...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
       <div className={`grid grid-${gridSize}`}>
-        {filteredVideos.map((video) => (
+        {videos.map((video, i) => (
           <div
-            key={video.id}
+            key={`${video.video_id ?? "missing"}-${i}`}
             className="card"
             onClick={() => setSelectedVideo(video)}
           >
             <img src={video.thumbnail} alt="thumb" />
             <div className="card-content">
               <h3>{video.title}</h3>
-              <p className="channel">{video.channel} Channel</p>
-              <p className="meta">
-                {video.duration} • {video.type} • {video.language}
+              <p className="channel">
+                {video.uploaded_by ? `${video.uploaded_by}` : "Uploaded Channel"}
               </p>
-              <span
-                className={
-                  video.status === "Published"
-                    ? "badge green"
-                    : "badge red"
-                }
-              >
-                {video.status}
+              <p className="meta">
+                {video.type ? video.type : "Unknown"} • {video.video_id ?? "N/A"}
+              </p>
+              <span className={video.published === "Yes" ? "badge green" : "badge red"}>
+                {video.published === "Yes" ? "Published" : "Not Published"}
               </span>
             </div>
           </div>
         ))}
       </div>
 
+      <div ref={sentinelRef} style={{ height: 1 }} />
+
+      {loading && !initialLoading && <p style={{ color: "#ffffff7a" }}>Loading more...</p>}
+      {!hasMore && videos.length > 0 && <p style={{ color: "#ffffff7a" }}>No more videos</p>}
+
       {selectedVideo && (
         <div className="modal" onClick={() => setSelectedVideo(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <img src={selectedVideo.thumbnail} alt="preview" />
             <h2>{selectedVideo.title}</h2>
-            <p>{selectedVideo.channel}</p>
+            <p>{selectedVideo.uploaded_by}</p>
+            {selectedVideo.published_url ? (
+              <a
+                href={selectedVideo.published_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-block", marginTop: 10, color: "#ff4649" }}
+              >
+                Open Published URL
+              </a>
+            ) : null}
             <button onClick={() => setSelectedVideo(null)}>Close</button>
           </div>
         </div>
