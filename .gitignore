@@ -31,10 +31,10 @@ coverage/
 dist/
 venv/
 
-# Database files
-*.db
-*.db-shm
-*.db-wal
+# # Database files
+# *.db
+# *.db-shm
+# *.db-wal
 
 # CSV data files
 *.csv

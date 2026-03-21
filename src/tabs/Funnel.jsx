@@ -64,7 +64,7 @@ export default function Funnel() {
   useEffect(() => {
     setPlotLoading(true);
     setPlotError(null);
-    fetch(`http://127.0.0.1:8000/funnel/plot/${plotSelected.value}`)
+    fetch(`https://frammer-ai.onrender.com/funnel/plot/${plotSelected.value}`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.error) { setPlotError(resData.error); setPlotData([]); setPlotChartType(null); }
@@ -78,7 +78,7 @@ export default function Funnel() {
   useEffect(() => {
     setKpiLoading(true);
     setKpiError(null);
-    fetch(`http://127.0.0.1:8000/funnel/kpi/${kpiSelected.value}`)
+    fetch(`https://frammer-ai.onrender.com/funnel/kpi/${kpiSelected.value}`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.error) { setKpiError(resData.error); setKpiData([]); setKpiChartType(null); }
