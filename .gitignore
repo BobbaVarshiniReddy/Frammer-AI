@@ -35,8 +35,6 @@ venv/
 *.db
 *.db-shm
 *.db-wal
-database/frammer.db
-database/*.db
 
 # CSV data files
 *.csv
