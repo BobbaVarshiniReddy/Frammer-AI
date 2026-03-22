@@ -93,7 +93,7 @@ export default function ClientChannel() {
     setPlotLoading(true);
     setPlotError(null);
     // fetch(`https://frammer-ai.onrender.com/channel/plot/${plotSelected.value}`)
-    fetch(`https://frammer-ai.onrender.com/channel/plot/${plotSelected.value}`)
+    fetch(`https://frammer-ai-1-spo5.onrender.com/channel/plot/${plotSelected.value}`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.error) { setPlotError(resData.error); setPlotData([]); }
