@@ -78,7 +78,7 @@ export default function Funnel() {
   useEffect(() => {
     setKpiLoading(true);
     setKpiError(null);
-    fetch(`https://frammer-ai.onrender.com/funnel/kpi/${kpiSelected.value}`)
+    fetch(`https://frammer-ai-1-spo5.onrender.com/funnel/kpi/${kpiSelected.value}`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.error) { setKpiError(resData.error); setKpiData([]); setKpiChartType(null); }
