@@ -53,8 +53,8 @@ export default function UsageTrends() {
     setPlotLoading(true);
     setPlotError(null);
     const url = plotSelected.endpoint === "duration"
-      ? `https://frammer-ai.onrender.com/trends/plot/duration/${plotSelected.value}`
-      : `https://frammer-ai.onrender.com/trends/plot/${plotSelected.value}`;
+      ? `https://frammer-ai-1-spo5.onrender.com/trends/plot/duration/${plotSelected.value}`
+      : `https://frammer-ai-1-spo5.onrender.com/trends/plot/${plotSelected.value}`;
     fetch(url)
       .then((res) => res.json())
       .then((resData) => {
@@ -69,7 +69,7 @@ export default function UsageTrends() {
   useEffect(() => {
     setKpiLoading(true);
     setKpiError(null);
-    fetch(`https://frammer-ai.onrender.com/trends/kpi/${kpiSelected.value}`)
+    fetch(`https://frammer-ai-1-spo5.onrender.com/trends/kpi/${kpiSelected.value}`)
       .then((res) => res.json())
       .then((resData) => {
         if (resData.error) { setKpiError(resData.error); setKpiData([]); }
