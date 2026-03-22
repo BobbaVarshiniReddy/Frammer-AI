@@ -14,6 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS raw_monthly_duration (
+    column1 TEXT,
+    column2 INTEGER
+)
+""")
 # ── Chatbot ───────────────────────────────────────────────────────────────────
 from text_to_sql.nlq_pipeline import nlq_query
 
