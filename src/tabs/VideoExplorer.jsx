@@ -37,12 +37,12 @@ export default function VideoExplorer() {
     if (filters.video_id) params.append("video_id", filters.video_id);
     params.append("offset", String(nextOffset));
     params.append("limit", String(PAGE_SIZE));
-    return `https://frammer-ai.onrender.com/videos?${params.toString()}`;
+    return `https://frammer-ai-1-spo5.onrender.com/videos?${params.toString()}`;
   };
 
   const fetchMeta = async () => {
     try {
-      const res = await fetch("https://frammer-ai.onrender.com/videos/meta");
+      const res = await fetch("https://frammer-ai-1-spo5.onrender.com/videos/meta");
       const data = await res.json();
       setMetaTypes(data.types || []);
       setMetaUploaders(data.uploaded_by || []);
